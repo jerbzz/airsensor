@@ -1,0 +1,22 @@
+# Core Dependencies
+pyyaml>=6.0
+pillow>=9.0.0
+RPi.GPIO>=0.7.1  # For PM sensor power management
+
+# Sensors
+scd4x>=0.0.2
+bme280>=0.0.4
+pms5003>=0.0.7
+enviroplus>=1.0.0
+ltr559>=0.1.1
+smbus2>=0.4.2
+
+# Display
+st7735>=0.0.5
+
+# MQTT
+paho-mqtt>=1.6.1
+
+# Optional - for noise measurement (if enabled)
+# sounddevice==0.3.15
+# scipy
