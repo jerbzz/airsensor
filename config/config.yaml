@@ -9,21 +9,22 @@ general:
 
 # SCD41 CO2 Sensor Settings (Optional Add-on)
 scd41:
-  enabled: false  # Set to true if you have the SCD41 sensor
-  altitude: 0  # meters above sea level (for pressure compensation)
+  enabled: true  # Set to true if you have the SCD41 sensor
+  altitude: 150  # meters above sea level (for pressure compensation)
   temperature_offset: 4.0  # degrees C to compensate for self-heating
 
 # Enviro+ Sensor Settings
 enviro:
   enabled: true
   # Particulate Matter Sensor (Optional Add-on)
-  pm_sensor: false  # Set to true if you have PMS5003 sensor installed
+  pm_sensor: true  # Set to true if you have PMS5003 sensor installed
   pm_sensor_type: pms5003  # or pmsa003
+  pm_sensor_serialport: /dev/ttyS0  # may be /dev/ttyAMA0 for older Pis
   
   # PM Sensor Power Management (extends sensor lifetime)
   pm_sleep_enabled: true  # Sleep sensor between readings to extend lifespan
   pm_sleep_duration: 180  # Seconds to sleep (default: 180 = 3 minutes)
-  pm_warmup_duration: 30  # Seconds to warm up after wake (default: 30)
+  pm_warmup_time: 30  # Seconds to warm up after wake (default: 30)
   
   # Environmental Sensors (Built into Enviro+)
   temperature_humidity: true  # BME280
@@ -31,7 +32,7 @@ enviro:
   light: true  # LTR559
   
   # Gas Sensors (Built into Enviro+, requires calibration)
-  gas_sensors: false  # MICS6814 - enable after calibration
+  gas_sensors: true  # MICS6814 - enable after calibration
   
   # Noise (requires additional setup)
   noise: false  # Requires microphone setup
@@ -40,7 +41,7 @@ enviro:
 display:
   enabled: true
   brightness: 1.0  # 0.0 to 1.0
-  rotation: 0  # 0, 90, 180, or 270 degrees
+  rotation: 270  # 0, 90, 180, or 270 degrees
   
   # Which screens to show (in order)
   # Screens will automatically skip if required sensors are disabled
@@ -76,7 +77,7 @@ mqtt:
   # - average: Report average of both sensors (requires both)
   # - scd41_primary: SCD41 as main sensor, BME280 as diagnostic (requires both)
   # If you don't have SCD41, use "bme280_only"
-  temp_humidity_mode: bme280_only
+  temp_humidity_mode: scd41_primary
   
   # Device info (shows in Home Assistant)
   device:
