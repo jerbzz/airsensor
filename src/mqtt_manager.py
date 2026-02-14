@@ -333,6 +333,15 @@ class MQTTManager:
             scd41 = data.get('scd41')
             if scd41:
                 self.client.publish(f"{self.base_topic}/co2", scd41.co2)
+                
+            pms = data.get('pms5003')
+                # Only publish PM data if PM sensor is enabled and data available
+            if pms.pm1 is not None:
+                self.client.publish(f"{self.base_topic}/pm1", round(pms.pm1, 1))
+            if pms.pm25 is not None:
+                self.client.publish(f"{self.base_topic}/pm25", round(pms.pm25, 1))
+            if pms.pm10 is not None:
+                self.client.publish(f"{self.base_topic}/pm10", round(pms.pm10, 1))
             
             # Temperature and Humidity - based on mode
             enviro = data.get('enviro')
@@ -387,13 +396,6 @@ class MQTTManager:
             if enviro:
                 if enviro.pressure is not None:
                     self.client.publish(f"{self.base_topic}/pressure", round(enviro.pressure, 1))
-                # Only publish PM data if PM sensor is enabled and data available
-                if enviro.pm1 is not None:
-                    self.client.publish(f"{self.base_topic}/pm1", round(enviro.pm1, 1))
-                if enviro.pm25 is not None:
-                    self.client.publish(f"{self.base_topic}/pm25", round(enviro.pm25, 1))
-                if enviro.pm10 is not None:
-                    self.client.publish(f"{self.base_topic}/pm10", round(enviro.pm10, 1))
                 if enviro.lux is not None:
                     self.client.publish(f"{self.base_topic}/lux", round(enviro.lux, 1))
             

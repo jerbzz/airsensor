@@ -319,6 +319,7 @@ class DisplayManager:
         
         scd41 = data.get('scd41')
         enviro = data.get('enviro')
+        pms = data.get('pms5003')
         
         # Title
         self.draw.text((5, 2), "Summary", font=self.fonts['small'], fill=(200, 200, 200))
@@ -342,9 +343,9 @@ class DisplayManager:
             y += 11
         
         # PM2.5
-        if enviro and enviro.pm25 is not None:
-            pm_color = (0, 255, 0) if enviro.pm25 < 12 else (255, 255, 0) if enviro.pm25 < 35 else (255, 0, 0)
-            self.draw.text((5, y), f"PM2.5: {enviro.pm25:.0f}μg/m³", font=self.fonts['tiny'], fill=pm_color)
+        if pms and pms.pm25 is not None:
+            pm_color = (0, 255, 0) if pms.pm25 < 12 else (255, 255, 0) if pms.pm25 < 35 else (255, 0, 0)
+            self.draw.text((5, y), f"PM2.5: {pms.pm25:.0f} μg/m³", font=self.fonts['tiny'], fill=pm_color)
     
     def close(self):
         """Clean shutdown"""
