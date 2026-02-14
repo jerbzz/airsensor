@@ -37,7 +37,7 @@ class CO2Monitor:
         
         # Timing
         self.update_interval = self.config['general']['update_interval']
-        self.display_cycle_time = self.config['general']['display_cycle_time']
+        self.display_cycle_time = self.config['display']['cycle_time']
         self.last_update = 0
         self.last_display_cycle = 0
         
@@ -152,12 +152,14 @@ class CO2Monitor:
             # Log readings
             if data['scd41']:
                 scd = data['scd41']
-                logger.info(f"SCD41: CO2={scd.co2}ppm, T={scd.temperature}°C, RH={scd.humidity}%")
+                logger.info(f"SCD41: CO2 = {scd.co2} ppm, T = {scd.temperature} °C, RH = {scd.humidity} %")
+                
+            if data['pms5003']:
+                pms = data['pms5003']
+                logger.info(f"PMS5003: PM1 = {pms.pm1}, PM2.5 = {pms.pm25}, PM10 = {pms.pm10} µg/m³")
             
-            if data['enviro']:
-                env = data['enviro']
-                if env.pm25 is not None:
-                    logger.info(f"Enviro: PM2.5={env.pm25:.1f}μg/m³, T={env.temperature}°C, P={env.pressure}hPa")
+            env = data['enviro']
+            logger.info(f"Enviro+: P={env.pressure}hPa, L={env.lux}lux")
             
             # Update display
             if self.display:
@@ -200,8 +202,8 @@ def main():
     """Entry point"""
     # Print banner
     print("\n" + "=" * 60)
-    print("  CO2 Monitor")
-    print("  Raspberry Pi Zero 2 W + Enviro+ + SCD41")
+    print("  Air Quality Sensor")
+    print("  Raspberry Pi Zero 2 W + Enviro+")
     print("=" * 60 + "\n")
     
     # Create and run application

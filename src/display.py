@@ -5,7 +5,6 @@ Clean, modular screen management
 """
 
 import time
-import time
 import logging
 from typing import Optional, Dict, Any
 from PIL import Image, ImageDraw, ImageFont
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 # Display dimensions
 WIDTH = 160
 HEIGHT = 80
-
 
 class DisplayManager:
     """Manages the Enviro+ ST7735 LCD display"""
@@ -27,15 +25,15 @@ class DisplayManager:
         self.draw = None
         self.fonts = {}
         self.current_screen = 0
-        self.screens = config.get('screens', ['co2_main'])
+        self.screens = config.get('screens')
         self._initialize()
     
     def _initialize(self):
-        """Initialize the display"""
+        """Initialise the display"""
         try:
             from ST7735 import ST7735
             
-            logger.info("Initializing ST7735 display...")
+            logger.info("Initialising ST7735 display...")
             
             self.disp = ST7735(
                 port=0,
@@ -62,10 +60,10 @@ class DisplayManager:
             # Show startup screen
             self._show_startup()
             
-            logger.info("Display initialized")
+            logger.info("Display initialised")
             
         except Exception as e:
-            logger.error(f"Failed to initialize display: {e}")
+            logger.error(f"Failed to initialise display: {e}")
             raise
     
     def _load_fonts(self):
@@ -93,8 +91,8 @@ class DisplayManager:
     def _show_startup(self):
         """Show startup screen"""
         self.draw.rectangle((0, 0, WIDTH, HEIGHT), (0, 0, 0))
-        self.draw.text((10, 25), "CO2 Monitor", font=self.fonts['large'], fill=(0, 255, 0))
-        self.draw.text((10, 50), "Initializing...", font=self.fonts['small'], fill=(255, 255, 255))
+        self.draw.text((10, 25), "Air Quality Sensor", font=self.fonts['large'], fill=(0, 255, 0))
+        self.draw.text((10, 50), "Initialising...", font=self.fonts['small'], fill=(255, 255, 255))
         self.disp.display(self.img)
     
     def clear(self):
@@ -116,16 +114,16 @@ class DisplayManager:
             screen_name = self.screens[self.current_screen]
         
         # Render the screen
-        if screen_name == 'co2_main':
-            self._render_co2_main(data)
-        elif screen_name == 'enviro_temp':
-            self._render_enviro_temp(data)
-        elif screen_name == 'enviro_pm':
-            self._render_enviro_pm(data)
-        elif screen_name == 'enviro_gas':
-            self._render_enviro_gas(data)
-        elif screen_name == 'enviro_weather':
-            self._render_enviro_weather(data)
+        if screen_name == 'co2':
+            self._render_co2(data)
+        elif screen_name == 'temp':
+            self._render_temp(data)
+        elif screen_name == 'pm':
+            self._render_pm(data)
+        elif screen_name == 'gas':
+            self._render_gas(data)
+        elif screen_name == 'baro':
+            self._render_baro(data)
         elif screen_name == 'summary':
             self._render_summary(data)
         
@@ -135,18 +133,18 @@ class DisplayManager:
     def _is_screen_available(self, screen_name: str, data: Dict[str, Any]) -> bool:
         """Check if a screen can be displayed based on available sensor data"""
         scd41 = data.get('scd41')
-        enviro = data.get('enviro')
+        pms5003 = data.get('pms5003')
         
-        if screen_name == 'co2_main':
+        if screen_name == 'co2':
             return scd41 is not None
-        elif screen_name == 'enviro_temp':
-            return scd41 is not None or (enviro and enviro.temperature is not None)
-        elif screen_name == 'enviro_pm':
-            return enviro and enviro.pm25 is not None
-        elif screen_name == 'enviro_gas':
-            return enviro and enviro.oxidising is not None
-        elif screen_name == 'enviro_weather':
-            return enviro and enviro.pressure is not None
+        elif screen_name == 'temp':
+            return True
+        elif screen_name == 'pm':
+            return pms5003 is not None
+        elif screen_name == 'gas':
+            return True
+        elif screen_name == 'baro':
+            return True
         elif screen_name == 'summary':
             return True  # Summary always available, shows what's available
         
@@ -178,7 +176,7 @@ class DisplayManager:
         else:
             return "UNHEALTHY"
     
-    def _render_co2_main(self, data: Dict[str, Any]):
+    def _render_co2(self, data: Dict[str, Any]):
         """Render main CO2 screen (large CO2 value)"""
         self.clear()
         
@@ -205,7 +203,7 @@ class DisplayManager:
         temp_text = f"{scd41.temperature:.1f}°C  {scd41.humidity:.0f}%"
         self.draw.text((80, 58), temp_text, font=self.fonts['tiny'], fill=(150, 150, 150))
     
-    def _render_enviro_temp(self, data: Dict[str, Any]):
+    def _render_temp(self, data: Dict[str, Any]):
         """Render temperature/humidity screen"""
         self.clear()
         
@@ -232,12 +230,12 @@ class DisplayManager:
             self.draw.text((10, y), f"{enviro.temperature:.1f}°C", font=self.fonts['medium'], fill=(255, 150, 0))
             self.draw.text((90, y), f"{enviro.humidity:.0f}%", font=self.fonts['medium'], fill=(100, 200, 255))
     
-    def _render_enviro_pm(self, data: Dict[str, Any]):
+    def _render_pm(self, data: Dict[str, Any]):
         """Render particulate matter screen"""
         self.clear()
         
-        enviro = data.get('enviro')
-        if not enviro or enviro.pm25 is None:
+        pms = data.get('pms5003')
+        if not pms or pms.pm25 is None:
             self.draw.text((5, 2), "Particulate Matter", font=self.fonts['small'], fill=(200, 200, 200))
             self.draw.text((10, 30), "No PM data", font=self.fonts['small'], fill=(255, 0, 0))
             return
@@ -246,8 +244,8 @@ class DisplayManager:
         self.draw.text((5, 2), "Particulate Matter", font=self.fonts['small'], fill=(200, 200, 200))
         
         # Show data age if available
-        if enviro.pm_timestamp is not None:
-            age_seconds = time.time() - enviro.pm_timestamp
+        if pms.pm_timestamp is not None:
+            age_seconds = time.time() - pms.pm_timestamp
             if age_seconds < 60:
                 age_text = "Live"
                 age_color = (0, 255, 0)
@@ -262,19 +260,19 @@ class DisplayManager:
             self.draw.text((130, 2), age_text, font=self.fonts['tiny'], fill=age_color)
         
         # PM2.5 - most important
-        pm25_color = (0, 255, 0) if enviro.pm25 < 12 else (255, 255, 0) if enviro.pm25 < 35 else (255, 0, 0)
+        pm25_color = (0, 255, 0) if pms.pm25 < 12 else (255, 255, 0) if pms.pm25 < 35 else (255, 0, 0)
         self.draw.text((5, 22), "PM2.5:", font=self.fonts['small'], fill=(150, 150, 150))
-        self.draw.text((10, 38), f"{enviro.pm25:.0f}", font=self.fonts['large'], fill=pm25_color)
+        self.draw.text((10, 38), f"{pms.pm25:.0f}", font=self.fonts['large'], fill=pm25_color)
         self.draw.text((80, 44), "μg/m³", font=self.fonts['tiny'], fill=(150, 150, 150))
         
         # PM1 and PM10 (smaller)
         y = 64
-        if enviro.pm1 is not None:
-            self.draw.text((5, y), f"PM1: {enviro.pm1:.0f}", font=self.fonts['tiny'], fill=(100, 100, 100))
-        if enviro.pm10 is not None:
-            self.draw.text((85, y), f"PM10: {enviro.pm10:.0f}", font=self.fonts['tiny'], fill=(100, 100, 100))
+        if pms.pm1 is not None:
+            self.draw.text((5, y), f"PM1: {pms.pm1:.0f}", font=self.fonts['tiny'], fill=(100, 100, 100))
+        if pms.pm10 is not None:
+            self.draw.text((85, y), f"PM10: {pms.pm10:.0f}", font=self.fonts['tiny'], fill=(100, 100, 100))
     
-    def _render_enviro_gas(self, data: Dict[str, Any]):
+    def _render_gas(self, data: Dict[str, Any]):
         """Render gas sensor screen"""
         self.clear()
         
@@ -294,7 +292,7 @@ class DisplayManager:
         y += 18
         self.draw.text((5, y), f"NH3:       {enviro.nh3:.0f} Ω", font=self.fonts['small'], fill=(150, 255, 150))
     
-    def _render_enviro_weather(self, data: Dict[str, Any]):
+    def _render_baro(self, data: Dict[str, Any]):
         """Render weather/pressure screen"""
         self.clear()
         
@@ -357,29 +355,4 @@ class DisplayManager:
 
 
 if __name__ == "__main__":
-    # Quick test
-    logging.basicConfig(level=logging.INFO)
-    
-    test_config = {
-        'rotation': 0,
-        'brightness': 1.0,
-        'screens': ['co2_main', 'summary']
-    }
-    
-    display = DisplayManager(test_config)
-    
-    # Mock data
-    from sensors import SCD41Data, EnviroData
-    
-    test_data = {
-        'scd41': SCD41Data(co2=850, temperature=22.5, humidity=45.0, timestamp=0),
-        'enviro': EnviroData(temperature=23.0, humidity=47.0, pm25=12.5, pressure=1013.2)
-    }
-    
-    try:
-        for i in range(6):
-            display.update(test_data)
-            time.sleep(3)
-            display.next_screen()
-    finally:
-        display.close()
+    print("Don't run this directly; use main.py.")

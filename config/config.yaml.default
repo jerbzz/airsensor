@@ -41,7 +41,7 @@ display:
 # MQTT Settings for Home Assistant
 mqtt:
   enabled: false
-  broker: ""  # MQTT broker address (often same as Home Assistant)
+  broker: "homeassistant.local"  # MQTT broker address (often same as Home Assistant)
                                # Examples: homeassistant.local, 192.168.1.100, mqtt.local
   port: 1883
   username: ""  # Leave empty if no authentication required

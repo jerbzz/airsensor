@@ -19,7 +19,7 @@ class MQTTManager:
         self.config = config
         self.client = None
         self.connected = False
-        self.base_topic = config.get('base_topic', 'co2_monitor/sensor')
+        self.base_topic = config.get('base_topic', 'airsensor')
         self.discovery_prefix = config.get('discovery_prefix', 'homeassistant')
         self.device_info = config.get('device', {})
         self._initialize()
@@ -94,11 +94,10 @@ class MQTTManager:
         logger.info("Sending Home Assistant discovery messages...")
         
         device = {
-            "identifiers": [self.device_info.get('identifier', 'co2_monitor_01')],
-            "name": self.device_info.get('name', 'CO2 Monitor'),
-            "manufacturer": self.device_info.get('manufacturer', 'Custom'),
-            "model": self.device_info.get('model', 'Pi + Enviro+ + SCD41')
-        }
+            "identifiers": [self.device_info.get('identifier', 'airsensor_01')],
+            "name": self.device_info.get('name', 'Air Quality Sensor'),
+            "manufacturer": self.device_info.get('manufacturer', 'artyzan.net'),
+            }
         
         # Get temperature/humidity reporting mode
         temp_mode = self.config.get('temp_humidity_mode', 'bme280_only')
@@ -109,7 +108,7 @@ class MQTTManager:
         if temp_mode in ['both', 'scd41_only', 'average', 'scd41_primary']:
             sensors.append({
                 "name": "CO2",
-                "unique_id": "co2_monitor_co2",
+                "unique_id": "airsensor_co2",
                 "state_topic": f"{self.base_topic}/co2",
                 "unit_of_measurement": "ppm",
                 "device_class": "carbon_dioxide",

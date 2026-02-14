@@ -65,6 +65,7 @@ echo ""
 
 # Copy example config if needed
 if [ ! -f config/config.yaml ]; then
+    cp config/config.yaml.default config/config.yaml
     echo "Config file created at config/config.yaml"
     echo "Please edit this file with your settings before running."
 fi
