@@ -11,7 +11,6 @@ import time
 
 logger = logging.getLogger(__name__)
 
-
 class MQTTManager:
     """Manages MQTT publishing to Home Assistant"""
     
@@ -19,9 +18,9 @@ class MQTTManager:
         self.config = config
         self.client = None
         self.connected = False
-        self.base_topic = config.get('base_topic', 'airsensor')
-        self.discovery_prefix = config.get('discovery_prefix', 'homeassistant')
-        self.device_info = config.get('device', {})
+        self.base_topic = config.get('mqtt', {}).get('base_topic', 'airsensor')
+        self.discovery_prefix = config.get('mqtt', {}).get('discovery_prefix', 'homeassistant')
+        self.device_info = config.get('mqtt', {}).get('device', {})
         self._initialize()
     
     def _initialize(self):
@@ -38,14 +37,14 @@ class MQTTManager:
             self.client.on_disconnect = self._on_disconnect
             
             # Set credentials if provided
-            username = self.config.get('username')
-            password = self.config.get('password')
+            username = self.config['mqtt']['username']
+            password = self.config['mqtt']['password']
             if username and password:
                 self.client.username_pw_set(username, password)
             
             # Connect
-            broker = self.config.get('broker', 'localhost')
-            port = self.config.get('port', 1883)
+            broker = self.config.get('mqtt', {}).get('broker', 'homeassistant.local')
+            port = self.config.get('mqtt', {}).get('port', 1883)
             
             logger.info(f"Connecting to MQTT broker at {broker}:{port}")
             self.client.connect(broker, port, 60)
@@ -63,7 +62,7 @@ class MQTTManager:
                 logger.info("MQTT connected successfully")
                 
                 # Send discovery messages if enabled
-                if self.config.get('discovery', True):
+                if self.config.get('mqtt', {}).get('discovery', True):
                     self._send_discovery()
             else:
                 logger.warning("MQTT connection timeout")
@@ -99,13 +98,14 @@ class MQTTManager:
             "manufacturer": self.device_info.get('manufacturer', 'artyzan.net'),
             }
         
-        # Get temperature/humidity reporting mode
-        temp_mode = self.config.get('temp_humidity_mode', 'bme280_only')
+        # Check config of optional sensors
+        self.scd41_enabled = self.config['scd41']['enabled']
+        self.pms5003_enabled = self.config['pms5003']['enabled']
         
         sensors = []
         
         # SCD41 CO2 sensor (only if enabled)
-        if temp_mode in ['both', 'scd41_only', 'average', 'scd41_primary']:
+        if self.scd41_enabled:
             sensors.append({
                 "name": "CO2",
                 "unique_id": "airsensor_co2",
@@ -117,70 +117,12 @@ class MQTTManager:
             })
         
         # Temperature and Humidity - based on mode
-        if temp_mode == "both":
-            # Report both sensors separately
-            sensors.extend([
-                {
-                    "name": "Temperature (SCD41)",
-                    "unique_id": "co2_monitor_temp_scd41",
-                    "state_topic": f"{self.base_topic}/temperature_scd41",
-                    "unit_of_measurement": "°C",
-                    "device_class": "temperature",
-                    "state_class": "measurement"
-                },
-                {
-                    "name": "Humidity (SCD41)",
-                    "unique_id": "co2_monitor_humidity_scd41",
-                    "state_topic": f"{self.base_topic}/humidity_scd41",
-                    "unit_of_measurement": "%",
-                    "device_class": "humidity",
-                    "state_class": "measurement"
-                },
-                {
-                    "name": "Temperature (Enviro)",
-                    "unique_id": "co2_monitor_temp_enviro",
-                    "state_topic": f"{self.base_topic}/temperature_enviro",
-                    "unit_of_measurement": "°C",
-                    "device_class": "temperature",
-                    "state_class": "measurement"
-                },
-                {
-                    "name": "Humidity (Enviro)",
-                    "unique_id": "co2_monitor_humidity_enviro",
-                    "state_topic": f"{self.base_topic}/humidity_enviro",
-                    "unit_of_measurement": "%",
-                    "device_class": "humidity",
-                    "state_class": "measurement"
-                }
-            ])
-        
-        elif temp_mode == "scd41_only":
-            # Only SCD41 temperature and humidity
-            sensors.extend([
-                {
-                    "name": "Temperature",
-                    "unique_id": "co2_monitor_temperature",
-                    "state_topic": f"{self.base_topic}/temperature",
-                    "unit_of_measurement": "°C",
-                    "device_class": "temperature",
-                    "state_class": "measurement"
-                },
-                {
-                    "name": "Humidity",
-                    "unique_id": "co2_monitor_humidity",
-                    "state_topic": f"{self.base_topic}/humidity",
-                    "unit_of_measurement": "%",
-                    "device_class": "humidity",
-                    "state_class": "measurement"
-                }
-            ])
-        
-        elif temp_mode == "bme280_only":
+        if not self.scd41_enabled:
             # Only BME280 temperature and humidity
             sensors.extend([
                 {
                     "name": "Temperature",
-                    "unique_id": "co2_monitor_temperature",
+                    "unique_id": "airsensor_temperature",
                     "state_topic": f"{self.base_topic}/temperature",
                     "unit_of_measurement": "°C",
                     "device_class": "temperature",
@@ -188,20 +130,20 @@ class MQTTManager:
                 },
                 {
                     "name": "Humidity",
-                    "unique_id": "co2_monitor_humidity",
+                    "unique_id": "airsensor_humidity",
                     "state_topic": f"{self.base_topic}/humidity",
                     "unit_of_measurement": "%",
                     "device_class": "humidity",
                     "state_class": "measurement"
                 }
             ])
-        
-        elif temp_mode == "average":
-            # Average of both sensors
+
+        else:
+            # SCD41 is enabled, use as primary, BME280 as diagnostic
             sensors.extend([
                 {
                     "name": "Temperature",
-                    "unique_id": "co2_monitor_temperature",
+                    "unique_id": "airsensor_temperature",
                     "state_topic": f"{self.base_topic}/temperature",
                     "unit_of_measurement": "°C",
                     "device_class": "temperature",
@@ -209,36 +151,15 @@ class MQTTManager:
                 },
                 {
                     "name": "Humidity",
-                    "unique_id": "co2_monitor_humidity",
-                    "state_topic": f"{self.base_topic}/humidity",
-                    "unit_of_measurement": "%",
-                    "device_class": "humidity",
-                    "state_class": "measurement"
-                }
-            ])
-        
-        elif temp_mode == "scd41_primary":
-            # SCD41 as primary, BME280 as diagnostic
-            sensors.extend([
-                {
-                    "name": "Temperature",
-                    "unique_id": "co2_monitor_temperature",
-                    "state_topic": f"{self.base_topic}/temperature",
-                    "unit_of_measurement": "°C",
-                    "device_class": "temperature",
-                    "state_class": "measurement"
-                },
-                {
-                    "name": "Humidity",
-                    "unique_id": "co2_monitor_humidity",
+                    "unique_id": "airsensor_humidity",
                     "state_topic": f"{self.base_topic}/humidity",
                     "unit_of_measurement": "%",
                     "device_class": "humidity",
                     "state_class": "measurement"
                 },
                 {
-                    "name": "Temperature (Enviro)",
-                    "unique_id": "co2_monitor_temp_diagnostic",
+                    "name": "Temperature (BME280)",
+                    "unique_id": "airsensor_temp_diagnostic",
                     "state_topic": f"{self.base_topic}/temperature_diagnostic",
                     "unit_of_measurement": "°C",
                     "device_class": "temperature",
@@ -246,8 +167,8 @@ class MQTTManager:
                     "entity_category": "diagnostic"
                 },
                 {
-                    "name": "Humidity (Enviro)",
-                    "unique_id": "co2_monitor_humidity_diagnostic",
+                    "name": "Humidity (BME280)",
+                    "unique_id": "airsensor_humidity_diagnostic",
                     "state_topic": f"{self.base_topic}/humidity_diagnostic",
                     "unit_of_measurement": "%",
                     "device_class": "humidity",
@@ -259,7 +180,7 @@ class MQTTManager:
         # Pressure (always from Enviro+)
         sensors.append({
             "name": "Pressure",
-            "unique_id": "co2_monitor_pressure",
+            "unique_id": "airsensor_pressure",
             "state_topic": f"{self.base_topic}/pressure",
             "unit_of_measurement": "hPa",
             "device_class": "pressure",
@@ -267,40 +188,42 @@ class MQTTManager:
         })
         
         # Particulate Matter sensors (only if PM sensor enabled - will be checked in publish)
-        sensors.extend([
-            {
-                "name": "PM1",
-                "unique_id": "co2_monitor_pm1",
-                "state_topic": f"{self.base_topic}/pm1",
-                "unit_of_measurement": "μg/m³",
-                "device_class": "pm1",
-                "state_class": "measurement",
-                "icon": "mdi:air-filter"
-            },
-            {
-                "name": "PM2.5",
-                "unique_id": "co2_monitor_pm25",
-                "state_topic": f"{self.base_topic}/pm25",
-                "unit_of_measurement": "μg/m³",
-                "device_class": "pm25",
-                "state_class": "measurement",
-                "icon": "mdi:air-filter"
-            },
-            {
-                "name": "PM10",
-                "unique_id": "co2_monitor_pm10",
-                "state_topic": f"{self.base_topic}/pm10",
-                "unit_of_measurement": "μg/m³",
-                "device_class": "pm10",
-                "state_class": "measurement",
-                "icon": "mdi:air-filter"
-            }
-        ])
+        
+        if self.pms5003_enabled:        
+            sensors.extend([
+                {
+                    "name": "PM1",
+                    "unique_id": "airsensor_pm1",
+                    "state_topic": f"{self.base_topic}/pm1",
+                    "unit_of_measurement": "μg/m³",
+                    "device_class": "pm1",
+                    "state_class": "measurement",
+                    "icon": "mdi:air-filter"
+                },
+                {
+                    "name": "PM2.5",
+                    "unique_id": "airsensor_pm25",
+                    "state_topic": f"{self.base_topic}/pm25",
+                    "unit_of_measurement": "μg/m³",
+                    "device_class": "pm25",
+                    "state_class": "measurement",
+                    "icon": "mdi:air-filter"
+                },
+                {
+                    "name": "PM10",
+                    "unique_id": "airsensor_pm10",
+                    "state_topic": f"{self.base_topic}/pm10",
+                    "unit_of_measurement": "μg/m³",
+                    "device_class": "pm10",
+                    "state_class": "measurement",
+                    "icon": "mdi:air-filter"
+                }
+            ])
         
         # Light sensor
         sensors.append({
             "name": "Light Level",
-            "unique_id": "co2_monitor_lux",
+            "unique_id": "airsensor_lux",
             "state_topic": f"{self.base_topic}/lux",
             "unit_of_measurement": "lx",
             "device_class": "illuminance",
@@ -326,8 +249,6 @@ class MQTTManager:
             return
         
         try:
-            # Get temperature/humidity reporting mode
-            temp_mode = self.config.get('temp_humidity_mode', 'bme280_only')
             
             # CO2 (only if SCD41 enabled and available)
             scd41 = data.get('scd41')
@@ -346,44 +267,13 @@ class MQTTManager:
             # Temperature and Humidity - based on mode
             enviro = data.get('enviro')
             
-            if temp_mode == "both":
-                # Publish both sensors separately
-                if scd41:
-                    self.client.publish(f"{self.base_topic}/temperature_scd41", round(scd41.temperature, 1))
-                    self.client.publish(f"{self.base_topic}/humidity_scd41", round(scd41.humidity, 1))
-                if enviro and enviro.temperature is not None:
-                    self.client.publish(f"{self.base_topic}/temperature_enviro", round(enviro.temperature, 1))
-                    self.client.publish(f"{self.base_topic}/humidity_enviro", round(enviro.humidity, 1))
-            
-            elif temp_mode == "scd41_only":
-                # Only SCD41
-                if scd41:
-                    self.client.publish(f"{self.base_topic}/temperature", round(scd41.temperature, 1))
-                    self.client.publish(f"{self.base_topic}/humidity", round(scd41.humidity, 1))
-            
-            elif temp_mode == "bme280_only":
+            if not self.scd41_enabled:
                 # Only BME280
                 if enviro and enviro.temperature is not None:
                     self.client.publish(f"{self.base_topic}/temperature", round(enviro.temperature, 1))
                     self.client.publish(f"{self.base_topic}/humidity", round(enviro.humidity, 1))
             
-            elif temp_mode == "average":
-                # Average of both sensors
-                if scd41 and enviro and enviro.temperature is not None:
-                    avg_temp = (scd41.temperature + enviro.temperature) / 2
-                    avg_humidity = (scd41.humidity + enviro.humidity) / 2
-                    self.client.publish(f"{self.base_topic}/temperature", round(avg_temp, 1))
-                    self.client.publish(f"{self.base_topic}/humidity", round(avg_humidity, 1))
-                elif scd41:
-                    # Fallback to SCD41 if Enviro not available
-                    self.client.publish(f"{self.base_topic}/temperature", round(scd41.temperature, 1))
-                    self.client.publish(f"{self.base_topic}/humidity", round(scd41.humidity, 1))
-                elif enviro and enviro.temperature is not None:
-                    # Fallback to BME280 if SCD41 not available
-                    self.client.publish(f"{self.base_topic}/temperature", round(enviro.temperature, 1))
-                    self.client.publish(f"{self.base_topic}/humidity", round(enviro.humidity, 1))
-            
-            elif temp_mode == "scd41_primary":
+            else:
                 # SCD41 as primary, BME280 as diagnostic
                 if scd41:
                     self.client.publish(f"{self.base_topic}/temperature", round(scd41.temperature, 1))
@@ -393,11 +283,10 @@ class MQTTManager:
                     self.client.publish(f"{self.base_topic}/humidity_diagnostic", round(enviro.humidity, 1))
             
             # Other Enviro+ sensors (always published if available)
-            if enviro:
-                if enviro.pressure is not None:
-                    self.client.publish(f"{self.base_topic}/pressure", round(enviro.pressure, 1))
-                if enviro.lux is not None:
-                    self.client.publish(f"{self.base_topic}/lux", round(enviro.lux, 1))
+            if enviro.pressure is not None:
+                self.client.publish(f"{self.base_topic}/pressure", round(enviro.pressure, 1))
+            if enviro.lux is not None:
+                self.client.publish(f"{self.base_topic}/lux", round(enviro.lux, 1))
             
             logger.debug("Published sensor data to MQTT")
             
@@ -413,41 +302,4 @@ class MQTTManager:
 
 
 if __name__ == "__main__":
-    # Quick test
-    logging.basicConfig(level=logging.INFO)
-    
-    test_config = {
-        'broker': 'localhost',
-        'port': 1883,
-        'username': '',
-        'password': '',
-        'discovery': True,
-        'base_topic': 'co2_monitor/sensor',
-        'discovery_prefix': 'homeassistant',
-        'device': {
-            'name': 'CO2 Monitor Test',
-            'manufacturer': 'Custom',
-            'model': 'Test',
-            'identifier': 'test_01'
-        }
-    }
-    
-    try:
-        mqtt = MQTTManager(test_config)
-        
-        # Mock data
-        from sensors import SCD41Data, EnviroData
-        
-        test_data = {
-            'scd41': SCD41Data(co2=850, temperature=22.5, humidity=45.0, timestamp=0),
-            'enviro': EnviroData(temperature=23.0, humidity=47.0, pm25=12.5, pressure=1013.2)
-        }
-        
-        mqtt.publish_data(test_data)
-        time.sleep(2)
-        
-    except Exception as e:
-        logger.error(f"Test failed: {e}")
-    finally:
-        if 'mqtt' in locals():
-            mqtt.close()
+    print("Don't run this directly; use main.py.")

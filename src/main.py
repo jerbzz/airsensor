@@ -22,7 +22,6 @@ from mqtt_manager import MQTTManager
 
 logger = logging.getLogger(__name__)
 
-
 class CO2Monitor:
     """Main application class"""
     
@@ -102,7 +101,7 @@ class CO2Monitor:
             # Initialize MQTT
             if self.config['mqtt']['enabled']:
                 logger.info("Initializing MQTT...")
-                self.mqtt = MQTTManager(self.config['mqtt'])
+                self.mqtt = MQTTManager(self.config)
             
             logger.info("Initialization complete!")
             logger.info("=" * 60)
@@ -145,36 +144,38 @@ class CO2Monitor:
     
     def _update_cycle(self):
         """Single update cycle - read sensors, update display, publish data"""
-        try:
-            # Read all sensors
-            data = self.sensors.read_all()
+        #try:
+        # Read all sensors
+        data = self.sensors.read_all()
+        
+        # Log readings
+        if data['scd41']:
+            scd = data['scd41']
+            logger.info(f"SCD41: CO2 = {scd.co2} ppm, T = {scd.temperature} °C, RH = {scd.humidity} %")
             
-            # Log readings
-            if data['scd41']:
-                scd = data['scd41']
-                logger.info(f"SCD41: CO2 = {scd.co2} ppm, T = {scd.temperature} °C, RH = {scd.humidity} %")
-                
-            if data['pms5003']:
-                pms = data['pms5003']
+        if data['pms5003']:
+            pms = data['pms5003']
+            # only log fresh data
+            if pms.pm_timestamp is not None and (time.time() - pms.pm_timestamp) < 5: 
                 logger.info(f"PMS5003: PM1 = {pms.pm1}, PM2.5 = {pms.pm25}, PM10 = {pms.pm10} µg/m³")
+        
+        env = data['enviro']
+        logger.info(f"Enviro+: P = {env.pressure} hPa, L = {env.lux} lux")
+        
+        # Update display
+        if self.display:
+            self.display.update(data)
+        
+        # Publish to MQTT
+        if self.mqtt:
+            self.mqtt.publish_data(data)
+        
+        # Optional: Log to file
+        if self.config.get('logging', {}).get('enabled', False):
+            self._log_data(data)
             
-            env = data['enviro']
-            logger.info(f"Enviro+: P = {env.pressure}hPa, L = {env.lux}lux")
-            
-            # Update display
-            if self.display:
-                self.display.update(data)
-            
-            # Publish to MQTT
-            if self.mqtt:
-                self.mqtt.publish_data(data)
-            
-            # Optional: Log to file
-            if self.config.get('logging', {}).get('enabled', False):
-                self._log_data(data)
-            
-        except Exception as e:
-            logger.error(f"Error in update cycle: {e}")
+        #except Exception as e:
+        #    logger.error(f"Error in update cycle: {e}")
     
     def _log_data(self, data: dict):
         """Log sensor data to file"""
