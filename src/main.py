@@ -159,7 +159,7 @@ class CO2Monitor:
                 logger.info(f"PMS5003: PM1 = {pms.pm1}, PM2.5 = {pms.pm25}, PM10 = {pms.pm10} µg/m³")
             
             env = data['enviro']
-            logger.info(f"Enviro+: P={env.pressure}hPa, L={env.lux}lux")
+            logger.info(f"Enviro+: P = {env.pressure}hPa, L = {env.lux}lux")
             
             # Update display
             if self.display:

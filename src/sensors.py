@@ -291,6 +291,8 @@ class PMS5003Sensor:
                     
         except Exception as e:
             logger.error(f"Error with PMS5003: {e}")
+            
+        return data
 
     def close(self):
         """Clean shutdown"""
