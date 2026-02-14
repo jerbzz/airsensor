@@ -1,17 +1,17 @@
 #!/bin/bash
-# CO2 Monitor Installation Script
+# Air Sensor Installation Script
 # Run with: bash install.sh
 
 set -e
 
 echo "=========================================="
-echo "  CO2 Monitor Installation"
+echo "  Air Sensor Installation"
 echo "=========================================="
 echo ""
 
 # Check if running on Raspberry Pi
 if ! grep -q "Raspberry Pi" /proc/cpuinfo; then
-    echo "Warning: This doesn't appear to be a Raspberry Pi"
+    echo "Warning: This device doesn't appear to be a Raspberry Pi."
     read -p "Continue anyway? (y/n) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -35,8 +35,10 @@ sudo apt-get install -y \
     python3-dev \
     python3-smbus \
     i2c-tools \
-    git
-
+    git \
+	fonts-dejavu \
+	fonts-dejavu-core
+	
 # Install Python packages
 echo "Installing Python dependencies..."
 pip3 install -r requirements.txt
@@ -55,10 +57,10 @@ i2cdetect -y 1
 
 echo ""
 echo "You should see:"
-echo "  - 0x62 (SCD41 CO2 sensor)"
-echo "  - 0x76 or 0x77 (BME280 temp/humidity/pressure)"
 echo "  - 0x23 (LTR559 light sensor)"
-echo "  - 0x04 (MICS6814 gas sensors)"
+echo "  - 0x49 (MICS6814 gas sensors)"
+echo "  - 0x62 (SCD41 CO2 sensor, if connected)"
+echo "  - 0x76 (BME280 temp/humidity/pressure)"
 echo ""
 
 # Copy example config if needed
@@ -78,7 +80,7 @@ echo "  2. Update MQTT broker address for Home Assistant"
 echo "  3. Run: python3 src/main.py"
 echo ""
 echo "To run automatically on boot:"
-echo "  sudo cp co2-monitor.service /etc/systemd/system/"
-echo "  sudo systemctl enable co2-monitor"
-echo "  sudo systemctl start co2-monitor"
+echo "  sudo cp airsensor.service /etc/systemd/system/"
+echo "  sudo systemctl enable airsensor"
+echo "  sudo systemctl start airsensor"
 echo ""
