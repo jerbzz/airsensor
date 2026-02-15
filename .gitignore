@@ -208,3 +208,4 @@ __marimo__/
 
 # Project config file (default is stored in config.yaml.default
 config/config.yaml
+logs/
