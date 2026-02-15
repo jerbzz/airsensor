@@ -74,7 +74,7 @@ sudo -u airsensor python -m venv /opt/airsensor/.venv/airsensor
 
 # Install Python packages
 echo "Installing Python dependencies..."
-sudo -u airsensor /opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt
+sudo -uH airsensor /opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt
 
 # Check I2C devices
 echo "Checking I2C devices..."
