@@ -61,8 +61,10 @@ echo "Creating Application Directory at /opt/airsensor..."
 if [ -d "/opt/airsensor" ]; then
   sudo rm -rf /opt/airsensor
   sudo mkdir /opt/airsensor
+  sudo mkdir /opt/airsensor/logs
 else
   sudo mkdir /opt/airsensor
+  sudo mkdir /opt/airsensor/logs
 fi
 
 sudo chown -R airsensor:airsensor /opt/airsensor
