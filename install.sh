@@ -48,9 +48,9 @@ echo "Your password is required to install system files..."
 if [ ! -d "/opt/airsensor" ]; then
   sudo mkdir /opt/airsensor
 fi
-sudo chown -R $USER /opt/airsensor 
-cd /opt/airsensor
-git clone https://github.com/jerbzz/airsensor
+sudo chown -R $USER /opt/airsensor
+sudo rm -fr /opt/airsensor/*
+git clone https://github.com/jerbzz/airsensor /opt/airsensor
 
 # Make a venv
 echo "Creating Python Virtual Environment..."
@@ -58,7 +58,7 @@ python -m venv /opt/airsensor/.venv/airsensor
 
 # Install Python packages
 echo "Installing Python dependencies..."
-/opt/airsensor/.venv/airsensor/bin/pip3 install -r requirements.txt
+/opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt
 
 # Check I2C devices
 echo "Checking I2C devices..."
