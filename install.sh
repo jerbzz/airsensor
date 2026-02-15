@@ -88,7 +88,7 @@ read -p "Would you like to install and start a systemd service to run this appli
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Your password may be required to install system files."
-    sudo cp airsensor.service /etc/systemd/system/
+    sudo cp /opt/airsensor/airsensor.service /etc/systemd/system/
     sudo systemctl enable airsensor
     sudo systemctl start airsensor
     echo ""
