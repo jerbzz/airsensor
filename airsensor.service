@@ -9,7 +9,7 @@ User=airsensor
 Group=airsensor
 WorkingDirectory=/opt/airsensor
 
-ExecStart=/opt/airsensor/.venv/bin/python3 /opt/airsensor/src/main.py
+ExecStart=/opt/airsensor/.venv/airsensor/bin/python3 /opt/airsensor/src/main.py
 
 # Restart policy
 Restart=on-failure
