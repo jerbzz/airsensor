@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class MQTTManager:
     """Manages MQTT publishing to Home Assistant"""
-    
+
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.client = None
@@ -22,58 +22,58 @@ class MQTTManager:
         self.discovery_prefix = config.get('mqtt', {}).get('discovery_prefix', 'homeassistant')
         self.device_info = config.get('mqtt', {}).get('device', {})
         self._initialize()
-    
+
     def _initialize(self):
         """Initialize MQTT client"""
         try:
             import paho.mqtt.client as mqtt
-            
+
             logger.info("Initializing MQTT client...")
-            
+
             self.client = mqtt.Client()
-            
+
             # Set callbacks
             self.client.on_connect = self._on_connect
             self.client.on_disconnect = self._on_disconnect
-            
+
             # Set credentials if provided
             username = self.config['mqtt']['username']
             password = self.config['mqtt']['password']
             if username and password:
                 self.client.username_pw_set(username, password)
-            
+
             # Connect
             broker = self.config.get('mqtt', {}).get('broker', 'homeassistant.local')
             port = self.config.get('mqtt', {}).get('port', 1883)
-            
+
             logger.info(f"Connecting to MQTT broker at {broker}:{port}")
             self.client.connect(broker, port, 60)
-            
+
             # Start loop in background
             self.client.loop_start()
-            
+
             # Wait for connection
             timeout = 5
             start = time.time()
             while not self.connected and (time.time() - start) < timeout:
                 time.sleep(0.1)
-            
+
             if self.connected:
                 logger.info("MQTT connected successfully")
-                
+
                 # Send discovery messages if enabled
                 if self.config.get('mqtt', {}).get('discovery', True):
                     self._send_discovery()
             else:
                 logger.warning("MQTT connection timeout")
-                
+
         except ImportError:
             logger.error("paho-mqtt library not found. Install with: pip3 install paho-mqtt")
             raise
         except Exception as e:
             logger.error(f"Failed to initialize MQTT: {e}")
             raise
-    
+
     def _on_connect(self, client, userdata, flags, rc):
         """Callback when connected to MQTT broker"""
         if rc == 0:
@@ -81,29 +81,29 @@ class MQTTManager:
             logger.info("Connected to MQTT broker")
         else:
             logger.error(f"MQTT connection failed with code {rc}")
-    
+
     def _on_disconnect(self, client, userdata, rc):
         """Callback when disconnected from MQTT broker"""
         self.connected = False
         if rc != 0:
             logger.warning(f"Unexpected MQTT disconnection (code {rc})")
-    
+
     def _send_discovery(self):
         """Send Home Assistant MQTT discovery messages"""
         logger.info("Sending Home Assistant discovery messages...")
-        
+
         device = {
             "identifiers": [self.device_info.get('identifier', 'airsensor_01')],
             "name": self.device_info.get('name', 'Air Quality Sensor'),
             "manufacturer": self.device_info.get('manufacturer', 'artyzan.net'),
             }
-        
+
         # Check config of optional sensors
         self.scd41_enabled = self.config['scd41']['enabled']
         self.pms5003_enabled = self.config['pms5003']['enabled']
-        
+
         sensors = []
-        
+
         # SCD41 CO2 sensor (only if enabled)
         if self.scd41_enabled:
             sensors.append({
@@ -115,7 +115,7 @@ class MQTTManager:
                 "state_class": "measurement",
                 "icon": "mdi:molecule-co2"
             })
-        
+
         # Temperature and Humidity - based on mode
         if not self.scd41_enabled:
             # Only BME280 temperature and humidity
@@ -176,7 +176,7 @@ class MQTTManager:
                     "entity_category": "diagnostic"
                 }
             ])
-        
+
         # Pressure (always from Enviro+)
         sensors.append({
             "name": "Pressure",
@@ -186,10 +186,10 @@ class MQTTManager:
             "device_class": "pressure",
             "state_class": "measurement"
         })
-        
+
         # Particulate Matter sensors (only if PM sensor enabled - will be checked in publish)
-        
-        if self.pms5003_enabled:        
+
+        if self.pms5003_enabled:
             sensors.extend([
                 {
                     "name": "PM1",
@@ -219,7 +219,7 @@ class MQTTManager:
                     "icon": "mdi:smoke"
                 }
             ])
-        
+
         # Light sensor
         sensors.append({
             "name": "Light Level",
@@ -229,7 +229,7 @@ class MQTTManager:
             "device_class": "illuminance",
             "state_class": "measurement"
         })
-        
+
         # MICS6814
         sensors.append({
             "name": "Oxidising Gases",
@@ -239,7 +239,7 @@ class MQTTManager:
             "state_class": "measurement",
             "icon": "mdi:molecule"
         })
-        
+
         sensors.append({
             "name": "Reducing Gases",
             "unique_id": "airsensor_red",
@@ -248,7 +248,7 @@ class MQTTManager:
             "state_class": "measurement",
             "icon": "mdi:molecule"
         })
-        
+
         sensors.append({
             "name": "Ammonia",
             "unique_id": "airsensor_nh3",
@@ -257,32 +257,32 @@ class MQTTManager:
             "state_class": "measurement",
             "icon": "mdi:molecule"
         })
-        
+
         # Send discovery for each sensor
         for sensor in sensors:
             sensor['device'] = device
-            
+
             topic = f"{self.discovery_prefix}/sensor/{sensor['unique_id']}/config"
             payload = json.dumps(sensor)
-            
+
             self.client.publish(topic, payload, retain=True)
             logger.debug(f"Sent discovery: {sensor['name']}")
-        
+
         logger.info(f"Sent {len(sensors)} discovery messages")
-    
+
     def publish_data(self, data: Dict[str, Any]):
         """Publish sensor data to MQTT"""
         if not self.connected:
             logger.warning("Not connected to MQTT broker")
             return
-        
+
         try:
-            
+
             # CO2 (only if SCD41 enabled and available)
             scd41 = data.get('scd41')
             if scd41:
                 self.client.publish(f"{self.base_topic}/co2", scd41.co2)
-                
+
             pms = data.get('pms5003')
                 # Only publish PM data if PM sensor is enabled and data available
             if pms.pm1 is not None:
@@ -291,16 +291,16 @@ class MQTTManager:
                 self.client.publish(f"{self.base_topic}/pm25", round(pms.pm25, 1))
             if pms.pm10 is not None:
                 self.client.publish(f"{self.base_topic}/pm10", round(pms.pm10, 1))
-            
+
             # Temperature and Humidity - based on mode
             enviro = data.get('enviro')
-            
+
             if not self.scd41_enabled:
                 # Only BME280
                 if enviro and enviro.temperature is not None:
                     self.client.publish(f"{self.base_topic}/temperature", round(enviro.temperature, 1))
                     self.client.publish(f"{self.base_topic}/humidity", round(enviro.humidity, 1))
-            
+
             else:
                 # SCD41 as primary, BME280 as diagnostic
                 if scd41:
@@ -309,7 +309,7 @@ class MQTTManager:
                 if enviro and enviro.temperature is not None:
                     self.client.publish(f"{self.base_topic}/temperature_diagnostic", round(enviro.temperature, 1))
                     self.client.publish(f"{self.base_topic}/humidity_diagnostic", round(enviro.humidity, 1))
-            
+
             # Other Enviro+ sensors (always published if available)
             if enviro.pressure is not None:
                 self.client.publish(f"{self.base_topic}/pressure", round(enviro.pressure, 1))
@@ -321,12 +321,12 @@ class MQTTManager:
                 self.client.publish(f"{self.base_topic}/red", enviro.reducing)
             if enviro.nh3 is not None:
                 self.client.publish(f"{self.base_topic}/nh3", enviro.nh3)
-            
+
             logger.debug("Published sensor data to MQTT")
-            
+
         except Exception as e:
             logger.error(f"Error publishing to MQTT: {e}")
-    
+
     def close(self):
         """Clean shutdown"""
         if self.client:

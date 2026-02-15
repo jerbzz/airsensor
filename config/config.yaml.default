@@ -14,7 +14,7 @@ scd41:
 pms5003:
   enabled: true
   serialport: /dev/ttyS0  # may be /dev/ttyAMA0 for older Pis
-  
+
   # PM Sensor Power Management (extends sensor lifetime)
   pm_sleep_enabled: true  # Sleep sensor between readings to extend lifespan
   pm_sleep_duration: 180  # Seconds to sleep (default: 180 = 3 minutes)
@@ -26,7 +26,7 @@ display:
   brightness: 1.0  # 0.0 to 1.0
   rotation: 270  # 0, 90, 180, or 270 degrees
   cycle_time: 10  # seconds to show each display screen
-  
+
   # Which screens to show (in order)
   # Screens will automatically skip if required sensors are disabled
   screens:
@@ -44,14 +44,14 @@ mqtt:
   port: 1883
   username: ""  # Leave empty if no authentication required
   password: ""  # Leave empty if no authentication required
-  
+
   # MQTT Discovery for Home Assistant
   discovery: true
   discovery_prefix: homeassistant
-  
+
   # Base topic for all sensors
   base_topic: airsensor/readings
-  
+
   # Device info (shows in Home Assistant)
   device:
     name: Air Quality Sensor
