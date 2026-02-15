@@ -41,8 +41,14 @@ echo "Enabling I2C and SPI..."
 sudo raspi-config nonint do_i2c 0
 sudo raspi-config nonint do_spi 0
 
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin -U airsensor
-
+# Creating airsensor user 
+echo "Creating airsensor user to run application as systemd service..."
+if id "airsensor" >/dev/null 2>&1; then
+    sudo deluser airsensor
+    sudo useradd --system --no-create-home --shell /usr/sbin/nologin -U airsensor
+else
+    sudo useradd --system --no-create-home --shell /usr/sbin/nologin -U airsensor
+fi
 # Add to various groups to enable hardware access
 sudo usermod -a -G gpio airsensor      # GPIO access
 sudo usermod -a -G i2c airsensor       # I2C sensors (BME280, LTR559, etc.)
@@ -52,10 +58,10 @@ sudo usermod -a -G dialout airsensor   # Serial port (PMS5003)
 # Create necessary directories
 echo "Creating Application Directory at /opt/airsensor..."
 
-if [ ! -d "/opt/airsensor" ]; then
+if [ -d "/opt/airsensor" ]; then
+  sudo rm -rf /opt/airsensor
   sudo mkdir /opt/airsensor
 else
-  sudo rm -rf /opt/airsensor
   sudo mkdir /opt/airsensor
 fi
 
