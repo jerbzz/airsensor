@@ -45,6 +45,7 @@ sudo raspi-config nonint do_spi 0
 echo "Creating Application Directory at /opt/airsensor..."
 echo "Your password is required to install system files..."
 sudo mkdir /opt/airsensor
+sudo chown -R $USER /opt/airsensor 
 cd /opt/airsensor
 git clone https://github.com/jerbzz/airsensor
 
