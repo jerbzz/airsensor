@@ -64,15 +64,15 @@ sudo -u airsensor git clone https://github.com/jerbzz/airsensor /opt/airsensor
 
 # Make a venv
 echo "Creating Python Virtual Environment..."
-python -m venv /opt/airsensor/.venv/airsensor
+sudo -u airsensor python -m venv /opt/airsensor/.venv/airsensor
 
 # Install Python packages
 echo "Installing Python dependencies..."
-/opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt
+sudo -u airsensor /opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt
 
 # Check I2C devices
 echo "Checking I2C devices..."
-i2cdetect -y 1
+sudo -u airsensor i2cdetect -y 1
 
 echo ""
 echo "You should see:"
@@ -85,30 +85,20 @@ echo ""
 # Copy example config if needed
 echo "Copying default configuration..."
 if [ ! -f /opt/airsensor/config/config.yaml ]; then
-    cp /opt/airsensor/config/config.yaml.default /opt/airsensor/config/config.yaml
+    sudo -u airsensor cp /opt/airsensor/config/config.yaml.default /opt/airsensor/config/config.yaml
     echo "Config file created at config/config.yaml"
     echo "Please edit this file with your settings before running."
 fi
 
 # Install systemd service
-read -p "Would you like to install and start a systemd service to run this application automatically at startup? (y/n) "
-echo ""
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Your password may be required to install system files."
-    sudo cp /opt/airsensor/airsensor.service /etc/systemd/system/
-    sudo systemctl enable airsensor
-    sudo systemctl start airsensor
-    echo ""
-fi
+sudo cp /opt/airsensor/airsensor.service /etc/systemd/system/
+sudo systemctl enable airsensor
 
 
 echo "Installation Complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Edit /opt/airsensor/config/config.yaml with your settings incuding updating MQTT broker address for Home Assistant"
-echo "  Then either, to run the application now:"
-echo "  2a. Activate the Python virtual environment by running source /opt/airsensor/.venv/bin/activate"
-echo "  3a. Run: python3 /opt/airsensor/src/main.py"
-echo "  Or, if you have chosen to install the systemd startup service:"
-echo "  2b. Nothing!"
-echo ""
+echo "  2. Start the service: 'sudo systemctl start airsensor'."
+echo "  3. Check it's running properly by observing the Enviro+ screen."
+echo "  4. 'sudo systemctl status airsensor' will tell you more."
