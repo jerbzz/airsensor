@@ -198,7 +198,7 @@ class MQTTManager:
                     "unit_of_measurement": "μg/m³",
                     "device_class": "pm1",
                     "state_class": "measurement",
-                    "icon": "mdi:air-filter"
+                    "icon": "mdi:smoke"
                 },
                 {
                     "name": "PM2.5",
@@ -207,7 +207,7 @@ class MQTTManager:
                     "unit_of_measurement": "μg/m³",
                     "device_class": "pm25",
                     "state_class": "measurement",
-                    "icon": "mdi:air-filter"
+                    "icon": "mdi:smoke"
                 },
                 {
                     "name": "PM10",
@@ -216,7 +216,7 @@ class MQTTManager:
                     "unit_of_measurement": "μg/m³",
                     "device_class": "pm10",
                     "state_class": "measurement",
-                    "icon": "mdi:air-filter"
+                    "icon": "mdi:smoke"
                 }
             ])
         
@@ -228,6 +228,34 @@ class MQTTManager:
             "unit_of_measurement": "lx",
             "device_class": "illuminance",
             "state_class": "measurement"
+        })
+        
+        # MICS6814
+        sensors.append({
+            "name": "Oxidising Gases",
+            "unique_id": "airsensor_oxi",
+            "state_topic": f"{self.base_topic}/oxi",
+            "unit_of_measurement": "Ω",
+            "state_class": "measurement",
+            "icon": "mdi:molecule"
+        })
+        
+        sensors.append({
+            "name": "Reducing Gases",
+            "unique_id": "airsensor_red",
+            "state_topic": f"{self.base_topic}/red",
+            "unit_of_measurement": "Ω",
+            "state_class": "measurement",
+            "icon": "mdi:molecule"
+        })
+        
+        sensors.append({
+            "name": "Ammonia",
+            "unique_id": "airsensor_nh3",
+            "state_topic": f"{self.base_topic}/nh3",
+            "unit_of_measurement": "Ω",
+            "state_class": "measurement",
+            "icon": "mdi:molecule"
         })
         
         # Send discovery for each sensor
@@ -287,6 +315,12 @@ class MQTTManager:
                 self.client.publish(f"{self.base_topic}/pressure", round(enviro.pressure, 1))
             if enviro.lux is not None:
                 self.client.publish(f"{self.base_topic}/lux", round(enviro.lux, 1))
+            if enviro.oxidising is not None:
+                self.client.publish(f"{self.base_topic}/oxi", enviro.oxidising)
+            if enviro.reducing is not None:
+                self.client.publish(f"{self.base_topic}/red", enviro.reducing)
+            if enviro.nh3 is not None:
+                self.client.publish(f"{self.base_topic}/nh3", enviro.nh3)
             
             logger.debug("Published sensor data to MQTT")
             

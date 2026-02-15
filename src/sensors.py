@@ -138,6 +138,10 @@ class PMS5003Sensor:
         self.PM_WARMUP_TIME = config.get('pm_warmup_time', 30)  # seconds
         self.PM_SLEEP_DURATION = config.get('pm_sleep_duration', 180)  # seconds
         self.pm_gpio_initialized = False
+        # Caching of last read value for when sensor is sleeping
+        self.last_pm1 = None
+        self.last_pm25 = None
+        self.last_pm10 = None
         
         self._initialize()
             
@@ -241,6 +245,12 @@ class PMS5003Sensor:
         try:
             from pms5003 import ReadTimeoutError, SerialTimeoutError
             
+            # Return last known values for when sensor is sleeping
+            data.pm1 = self.last_pm1
+            data.pm25 = self.last_pm25
+            data.pm10 = self.last_pm10
+            data.pm_timestamp = self.pm_timestamp if self.pm_timestamp > 0 else None
+            
             # Check if it's time to read the PM sensor
             should_read = self._should_read_pm_sensor()
             
@@ -253,11 +263,11 @@ class PMS5003Sensor:
                     for attempt in range(3):
                         try:
                             pm_data = self.pms5003.read()
-                            data.pm1 = pm_data.pm_ug_per_m3(1.0)
-                            data.pm25 = pm_data.pm_ug_per_m3(2.5)
-                            data.pm10 = pm_data.pm_ug_per_m3(10)
+                            self.last_pm1 = data.pm1 = pm_data.pm_ug_per_m3(1.0)
+                            self.last_pm25 = data.pm25 = pm_data.pm_ug_per_m3(2.5)
+                            self.last_pm10 = data.pm10 = pm_data.pm_ug_per_m3(10)
                             data.pm_timestamp = self.pm_timestamp = time.time()
-                            logger.info(f"PM: {data.pm25:.1f}μg/m³ (attempt {attempt + 1})")
+                            logger.info(f"PM: {data.pm25:.1f} μg/m³ (attempt {attempt + 1})")
                             break
                         except (ReadTimeoutError, SerialTimeoutError):
                             if attempt < 2:

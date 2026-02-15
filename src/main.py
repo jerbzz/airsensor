@@ -22,12 +22,13 @@ from mqtt_manager import MQTTManager
 
 logger = logging.getLogger(__name__)
 
-class CO2Monitor:
+class Airsensor:
     """Main application class"""
     
     def __init__(self, config_path: str = "config/config.yaml"):
         self.config = self._load_config(config_path)
         self.running = False
+        self.firstcycle = True
         
         # Components
         self.sensors: Optional[SensorManager] = None
@@ -117,6 +118,7 @@ class CO2Monitor:
         logger.info("Starting main loop...")
         logger.info(f"Update interval: {self.update_interval}s")
         logger.info(f"Display cycle time: {self.display_cycle_time}s")
+        logger.info("Waiting 10 seconds for sensors to stabilise...")
         
         try:
             while self.running:
@@ -148,6 +150,12 @@ class CO2Monitor:
         # Read all sensors
         data = self.sensors.read_all()
         
+        if self.firstcycle:
+            logger.info("Waiting 10 seconds on first cycle for sensors to stabilise...")
+            time.sleep(10)
+            data = self.sensors.read_all()
+            self.firstcycle = False
+            
         # Log readings
         if data['scd41']:
             scd = data['scd41']
@@ -161,6 +169,7 @@ class CO2Monitor:
         
         env = data['enviro']
         logger.info(f"Enviro+: P = {env.pressure} hPa, L = {env.lux} lux")
+        logger.info(f"MICS6814: Oxi = {env.oxidising / 1000:.0f} kΩ, Red = {env.reducing / 1000:.0f} kΩ, NH₃ = {env.nh3 / 1000:.0f} kΩ")
         
         # Update display
         if self.display:
@@ -208,7 +217,7 @@ def main():
     print("=" * 60 + "\n")
     
     # Create and run application
-    app = CO2Monitor()
+    app = Airsensor()
     
     try:
         app.initialize()

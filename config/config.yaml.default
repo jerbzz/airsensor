@@ -1,14 +1,14 @@
 # Air Quality Sensor configuration
 
 general:
-  log_level: INFO  # DEBUG, INFO, WARNING, ERROR
+  log_level: WARNING  # DEBUG, INFO, WARNING, ERROR
   update_interval: 5  # seconds between sensor readings
 
 # SCD41 CO2 Sensor Settings (Optional Add-on - connect to GPIO breakouts on Enviro+)
 scd41:
   enabled: true  # Set to true if you have the SCD41 sensor
   altitude: 150  # meters above sea level (for pressure compensation)
-  temperature_offset: 4.0  # degrees C to compensate for self-heating
+  temperature_offset: 2.0  # degrees C to compensate for self-heating
 
  # PMS5003 Particulate Matter Sensor (Optional Add-on)
 pms5003:
@@ -20,7 +20,6 @@ pms5003:
   pm_sleep_duration: 180  # Seconds to sleep (default: 180 = 3 minutes)
   pm_warmup_time: 30  # Seconds to warm up after wake (default: 30)
 
-
 # Display Settings
 display:
   enabled: true
@@ -31,18 +30,17 @@ display:
   # Which screens to show (in order)
   # Screens will automatically skip if required sensors are disabled
   screens:
-    - co2_main      # SCD41 CO2 reading (requires SCD41)
-    - enviro_temp   # Temperature and humidity (requires SCD41 or Enviro+)
-    - enviro_pm     # Particulate matter (requires PM sensor)
-    - enviro_gas    # Gas readings (requires gas sensors enabled)
-    - enviro_weather # Pressure and forecast (requires Enviro+)
-    - summary       # All-in-one summary (shows available sensors)
+    - co2       # SCD41 CO2 reading (requires SCD41)
+    - temp      # Temperature and humidity (requires SCD41 or Enviro+)
+    - pm        # Particulate matter (requires PM sensor)
+    - gas       # Gas readings (requires gas sensors enabled)
+    - baro      # Pressure and forecast (requires Enviro+)
+    - summary   # All-in-one summary (shows available sensors)
 
 # MQTT Settings for Home Assistant
 mqtt:
-  enabled: false
+  enabled: true
   broker: "homeassistant.local"  # MQTT broker address (often same as Home Assistant)
-                               # Examples: homeassistant.local, 192.168.1.100, mqtt.local
   port: 1883
   username: ""  # Leave empty if no authentication required
   password: ""  # Leave empty if no authentication required
@@ -60,19 +58,3 @@ mqtt:
     manufacturer: artyzan.net
     model: Pi Zero 2 W + Enviro+
     identifier: airsensor_01
-
-# Data Logging
-logging:
-  enabled: false
-  log_file: logs/sensor_data.log
-  rotation: daily  # daily, weekly, or size
-  max_size_mb: 100
-  keep_days: 30
-
-# Alerts (optional - can trigger via MQTT)
-alerts:
-  enabled: false
-  co2_high: 1500  # ppm
-  co2_very_high: 2000  # ppm
-  pm25_high: 35  # μg/m³
-  pm25_very_high: 55  # μg/m³
