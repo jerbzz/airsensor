@@ -43,15 +43,17 @@ sudo raspi-config nonint do_spi 0
 
 # Create necessary directories
 echo "Creating Application Directory at /opt/airsensor..."
-echo "Your password may be required to install system files..."
+echo "Your password may be required to install system files."
 
 if [ ! -d "/opt/airsensor" ]; then
   sudo mkdir /opt/airsensor
+else
+  sudo rm -rf /opt/airsensor
+  sudo mkdir /opt/airsensor
 fi
-sudo chown -R $USER /opt/airsensor
-sudo rm -fr /opt/airsensor/
-git clone https://github.com/jerbzz/airsensor /opt/airsensor
 
+sudo chown -R $USER /opt/airsensor
+git clone https://github.com/jerbzz/airsensor /opt/airsensor
 # Make a venv
 echo "Creating Python Virtual Environment..."
 python -m venv /opt/airsensor/.venv/airsensor
@@ -84,7 +86,7 @@ fi
 read -p "Would you like to install and start a systemd service to run this application automatically at startup? (y/n) "
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Your password may be required to install system files..."
+    echo "Your password may be required to install system files."
     sudo cp airsensor.service /etc/systemd/system/
     sudo systemctl enable airsensor
     sudo systemctl start airsensor
