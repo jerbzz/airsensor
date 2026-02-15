@@ -5,6 +5,7 @@
 set -e
 
 echo "Installing Airsensor Python Application..."
+echo "Your password may be required to install system files."
 
 if [ "$(id -u)" -eq 0 ]; then
     fatal "Script should not be run as root. Try './install.sh'\n"
@@ -40,10 +41,16 @@ echo "Enabling I2C and SPI..."
 sudo raspi-config nonint do_i2c 0
 sudo raspi-config nonint do_spi 0
 
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin -U airsensor
+
+# Add to various groups to enable hardware access
+sudo usermod -a -G gpio airsensor      # GPIO access
+sudo usermod -a -G i2c airsensor       # I2C sensors (BME280, LTR559, etc.)
+sudo usermod -a -G spi airsensor       # SPI (ST7735 display)
+sudo usermod -a -G dialout airsensor   # Serial port (PMS5003)
 
 # Create necessary directories
 echo "Creating Application Directory at /opt/airsensor..."
-echo "Your password may be required to install system files."
 
 if [ ! -d "/opt/airsensor" ]; then
   sudo mkdir /opt/airsensor
@@ -52,8 +59,8 @@ else
   sudo mkdir /opt/airsensor
 fi
 
-sudo chown -R $USER /opt/airsensor
-git clone https://github.com/jerbzz/airsensor /opt/airsensor
+sudo chown -R airsensor:airsensor /opt/airsensor
+sudo -u airsensor git clone https://github.com/jerbzz/airsensor /opt/airsensor
 
 # Make a venv
 echo "Creating Python Virtual Environment..."
