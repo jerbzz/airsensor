@@ -44,7 +44,10 @@ sudo raspi-config nonint do_spi 0
 # Create necessary directories
 echo "Creating Application Directory at /opt/airsensor..."
 echo "Your password is required to install system files..."
-sudo mkdir /opt/airsensor
+
+if [ ! -d "/opt/airsensor" ]; then
+  sudo mkdir /opt/airsensor
+fi
 sudo chown -R $USER /opt/airsensor 
 cd /opt/airsensor
 git clone https://github.com/jerbzz/airsensor
@@ -81,7 +84,7 @@ fi
 read -p "Would you like to install and start a systemd service to run this application automatically at startup? (y/n) "
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Your password is required to install system files..."
+    echo "Your password may be required to install system files..."
     sudo cp airsensor.service /etc/systemd/system/
     sudo systemctl enable airsensor
     sudo systemctl start airsensor
