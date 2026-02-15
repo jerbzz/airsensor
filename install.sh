@@ -43,13 +43,13 @@ sudo raspi-config nonint do_spi 0
 
 # Create necessary directories
 echo "Creating Application Directory at /opt/airsensor..."
-echo "Your password is required to install system files..."
+echo "Your password may be required to install system files..."
 
 if [ ! -d "/opt/airsensor" ]; then
   sudo mkdir /opt/airsensor
 fi
 sudo chown -R $USER /opt/airsensor
-sudo rm -fr /opt/airsensor/*
+sudo rm -fr /opt/airsensor/
 git clone https://github.com/jerbzz/airsensor /opt/airsensor
 
 # Make a venv
