@@ -4,10 +4,11 @@
 
 set -e
 
-echo "=========================================="
-echo "  Air Sensor Installation"
-echo "=========================================="
-echo ""
+echo "Installing Airsensor Python Application..."
+
+if [ "$(id -u)" -eq 0 ]; then
+    fatal "Script should not be run as root. Try './install.sh'\n"
+fi
 
 # Check if running on Raspberry Pi
 if ! grep -q "Raspberry Pi" /proc/cpuinfo; then
@@ -23,11 +24,6 @@ fi
 echo "Updating system packages..."
 sudo apt-get update
 
-# Enable I2C and SPI
-echo "Enabling I2C and SPI..."
-sudo raspi-config nonint do_i2c 0
-sudo raspi-config nonint do_spi 0
-
 # Install system dependencies
 echo "Installing system dependencies..."
 sudo apt-get install -y \
@@ -36,23 +32,31 @@ sudo apt-get install -y \
     python3-smbus \
     i2c-tools \
     git \
-	fonts-dejavu \
-	fonts-dejavu-core
-	
-# Install Python packages
-echo "Installing Python dependencies..."
-pip3 install -r requirements.txt
+    fonts-dejavu \
+    fonts-dejavu-core
+
+# Enable I2C and SPI
+echo "Enabling I2C and SPI..."
+sudo raspi-config nonint do_i2c 0
+sudo raspi-config nonint do_spi 0
+
 
 # Create necessary directories
-echo "Creating directories..."
-mkdir -p logs
-mkdir -p config
+echo "Creating Application Directory at /opt/airsensor..."
+mkdir /opt/airsensor
+cd /opt/airsensor
+git clone https://github.com/jerbzz/airsensor
+
+# Make a venv
+echo "Creating Python Virtual Environment..."
+python -m venv /opt/airsensor/.venv/airsensor
+
+# Install Python packages
+echo "Installing Python dependencies..."
+/opt/airsensor/.venv/airsensor/bin/pip3 install -r requirements.txt
 
 # Check I2C devices
-echo ""
-echo "=========================================="
 echo "Checking I2C devices..."
-echo "=========================================="
 i2cdetect -y 1
 
 echo ""
@@ -64,24 +68,32 @@ echo "  - 0x76 (BME280 temp/humidity/pressure)"
 echo ""
 
 # Copy example config if needed
-if [ ! -f config/config.yaml ]; then
-    cp config/config.yaml.default config/config.yaml
+echo "Copying default configuration..."
+if [ ! -f /opt/airsensor/config/config.yaml ]; then
+    cp /opt/airsensor/config/config.yaml.default /opt/airsensor/config/config.yaml
     echo "Config file created at config/config.yaml"
     echo "Please edit this file with your settings before running."
 fi
 
+# Install systemd service
+read -p "Would you like to install and start a systemd service to run this application automatically at startup? (y/n) "
 echo ""
-echo "=========================================="
-echo "  Installation Complete!"
-echo "=========================================="
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Your password is required to install system files..."
+    sudo cp airsensor.service /etc/systemd/system/
+    sudo systemctl enable airsensor
+    sudo systemctl start airsensor
+    echo ""
+fi
+
+
+echo "Installation Complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Edit config/config.yaml with your settings"
-echo "  2. Update MQTT broker address for Home Assistant"
-echo "  3. Run: python3 src/main.py"
-echo ""
-echo "To run automatically on boot:"
-echo "  sudo cp airsensor.service /etc/systemd/system/"
-echo "  sudo systemctl enable airsensor"
-echo "  sudo systemctl start airsensor"
+echo "  1. Edit /opt/airsensor/config/config.yaml with your settings incuding updating MQTT broker address for Home Assistant"
+echo "  Then either, to run the application now:"
+echo "  2a. Activate the Python virtual environment by running source /opt/airsensor/.venv/bin/activate"
+echo "  3a. Run: python3 /opt/airsensor/src/main.py"
+echo "  Or, if you have chosen to install the systemd startup service:"
+echo "  2b. Nothing!"
 echo ""

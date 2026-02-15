@@ -1,12 +1,12 @@
 [Unit]
-Description=CO2 Monitor Service
+Description=Airsensor Service
 After=network.target
 
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/co2-monitor
-ExecStart=/usr/bin/python3 /home/pi/co2-monitor/src/main.py
+WorkingDirectory=/opt/airsensor
+ExecStart=/opt/airsensor/.venv/airsensor/bin/python /opt/airsensor/src/main.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
