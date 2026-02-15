@@ -54,6 +54,7 @@ fi
 
 sudo chown -R $USER /opt/airsensor
 git clone https://github.com/jerbzz/airsensor /opt/airsensor
+
 # Make a venv
 echo "Creating Python Virtual Environment..."
 python -m venv /opt/airsensor/.venv/airsensor
