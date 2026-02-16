@@ -237,7 +237,6 @@ class PMS5003Sensor:
         except Exception as e:
             logger.error(f"Failed to sleep PM sensor: {e}")
 
-
     def read(self) -> PMS5003Data:
 
         data = PMS5003Data()
