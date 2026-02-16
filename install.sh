@@ -68,20 +68,17 @@ fi
 sudo chown -R airsensor:airsensor /opt/airsensor
 
 echo "Fetching project files from GitHub..."
-sudo -uH airsensor git clone https://github.com/jerbzz/airsensor /opt/airsensor
+sudo -u airsensor git clone https://github.com/jerbzz/airsensor /opt/airsensor
 
 echo "Creating logs directory..."
-sudo -uH airsensor mkdir /opt/airsensor/logs
+sudo -u airsensor mkdir /opt/airsensor/logs
 
-# Make a venv
 echo "Creating Python Virtual Environment..."
-sudo -uH airsensor python -m venv /opt/airsensor/.venv/airsensor
+sudo -u airsensor python -m venv /opt/airsensor/.venv/airsensor
 
-# Install Python packages
 echo "Installing Python dependencies..."
-sudo -uH airsensor /opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt
+sudo -H -u airsensor /opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt
 
-# Check I2C devices
 echo "Checking I2C devices..."
 sudo -u airsensor i2cdetect -y 1
 
