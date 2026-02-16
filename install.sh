@@ -61,18 +61,21 @@ echo "Creating Application Directory at /opt/airsensor..."
 if [ -d "/opt/airsensor" ]; then
   sudo rm -rf /opt/airsensor
   sudo mkdir /opt/airsensor
-  sudo mkdir /opt/airsensor/logs
 else
   sudo mkdir /opt/airsensor
-  sudo mkdir /opt/airsensor/logs
 fi
 
 sudo chown -R airsensor:airsensor /opt/airsensor
-sudo -u airsensor git clone https://github.com/jerbzz/airsensor /opt/airsensor
+
+echo "Fetching project files from GitHub..."
+sudo -uH airsensor git clone https://github.com/jerbzz/airsensor /opt/airsensor
+
+echo "Creating logs directory..."
+sudo -uH airsensor mkdir /opt/airsensor/logs
 
 # Make a venv
 echo "Creating Python Virtual Environment..."
-sudo -u airsensor python -m venv /opt/airsensor/.venv/airsensor
+sudo -uH airsensor python -m venv /opt/airsensor/.venv/airsensor
 
 # Install Python packages
 echo "Installing Python dependencies..."
