@@ -77,7 +77,7 @@ echo "Creating Python Virtual Environment..."
 sudo -u airsensor python -m venv /opt/airsensor/.venv/airsensor
 
 echo "Installing Python dependencies..."
-sudo -H -u airsensor /opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt
+sudo -u airsensor /opt/airsensor/.venv/airsensor/bin/pip3 install -r /opt/airsensor/requirements.txt --cache-dir=/opt/airsensor/.venv/pip-cache
 
 echo "Checking I2C devices..."
 sudo -u airsensor i2cdetect -y 1
