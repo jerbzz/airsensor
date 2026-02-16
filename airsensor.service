@@ -1,34 +1,15 @@
 [Unit]
-Description=Air Quality Sensor Monitor
+Description=Pimoroni Enviro+ Air Quality Sensor Service
 After=network.target
-Wants=network-online.target
 
 [Service]
 Type=simple
-User=airsensor
-Group=airsensor
 WorkingDirectory=/opt/airsensor
-
-ExecStart=/opt/airsensor/.venv/airsensor/bin/python3 /opt/airsensor/src/main.py
-
-# Restart policy
+ExecStart=/opt/airsensor/.venv/airsensor/bin/python /opt/airsensor/src/main.py
 Restart=on-failure
-RestartSec=10s
-
-# Logging
+RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=airsensor
-
-# Security hardening
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/opt/airsensor/logs
-
-# Allow access to hardware
-SupplementaryGroups=gpio i2c spi dialout
 
 [Install]
 WantedBy=multi-user.target
