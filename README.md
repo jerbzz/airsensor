@@ -1,15 +1,16 @@
-# CO2 Monitor
+# Enviro+ Airsensor
 
-A clean, modern environmental monitoring system for Raspberry Pi Zero 2 W with Pimoroni Enviro+ and SCD41 CO2 sensor.
+A system to collect data from the Pimoroni Enviro+ and deliver it to HomeAssistant.
 
 ## Features
 
-✅ **True CO2 Monitoring** - SCD41 photoacoustic sensor (400-5000 ppm)  
-✅ **Full Environmental Data** - Temperature, humidity, pressure, light, PM  
-✅ **LCD Display** - Cycling screens showing all sensor data  
-✅ **Home Assistant Integration** - MQTT with auto-discovery  
-✅ **Clean Code** - Modern Python, well-structured and maintainable  
-✅ **Easy Configuration** - Single YAML config file  
+✅ **Home Assistant integration** - MQTT with auto-discovery, zero HA configuration required
+✅ **LCD display** - Cycling screens showing all sensor data
+✅ **Easy installation** - Installs with one command, including to run automatically at startup
+✅ **Easy configuration** - Single YAML config file, human-readable with sane defaults
+✅ **Supports Enviro+ sensor suite** - Temperature, humidity, pressure, light level, pollutant gases
+✅ **Particulate matter monitoring (optional)** - Support for PMS5003
+✅ **True CO2 monitoring (optional)** - Support for SCD41 photoacoustic sensor (400-5000 ppm)
 
 ## Hardware Requirements
 
@@ -20,10 +21,8 @@ A clean, modern environmental monitoring system for Raspberry Pi Zero 2 W with P
 - Power supply
 
 **Optional Add-ons:**
-- Pimoroni SCD41 CO2 Sensor Breakout (for true CO2 monitoring)
-- PMS5003 Particulate Matter sensor (soldered to Enviro+, for PM readings)
-
-**Note:** The SCD41 and PMS5003 are **optional**. The system works with just the base Enviro+ and can be configured for your specific hardware. See `docs/HARDWARE_CONFIG.md` for configuration examples.
+- PMS5003 Particulate Matter sensor (dedicated connector available on Enviro+)
+- Pimoroni SCD41 CO2 Sensor Breakout (requires soldering or another method of connection to Enviro+ GPIO headers)
 
 ## Quick Start
 
