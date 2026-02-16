@@ -37,8 +37,8 @@ class MQTTManager:
             self.client.on_disconnect = self._on_disconnect
 
             # Set credentials if provided
-            username = self.config['mqtt']['username']
-            password = self.config['mqtt']['password']
+            username = self.config['mqtt'].get('username')
+            password = self.config['mqtt'].get('password')
             if username and password:
                 self.client.username_pw_set(username, password)
 
@@ -47,7 +47,14 @@ class MQTTManager:
             port = self.config.get('mqtt', {}).get('port', 1883)
 
             logger.info(f"Connecting to MQTT broker at {broker}:{port}")
-            self.client.connect(broker, port, 60)
+            
+            try:
+                self.client.connect(broker, port, 60)
+            except (OSError, ConnectionRefusedError, TimeoutError) as e:
+                logger.error(f"Failed to connect to MQTT broker at {broker}:{port}: {e}")
+                logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
+                self.client = None
+                return
 
             # Start loop in background
             self.client.loop_start()
@@ -65,14 +72,24 @@ class MQTTManager:
                 if self.config.get('mqtt', {}).get('discovery', True):
                     self._send_discovery()
             else:
-                logger.warning("MQTT connection timeout")
+                logger.warning("MQTT connection timeout - broker may be unreachable")
+                logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
+                self.client.loop_stop()
+                self.client = None
 
         except ImportError:
             logger.error("paho-mqtt library not found. Install with: pip3 install paho-mqtt")
-            raise
+            logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
+            self.client = None
         except Exception as e:
-            logger.error(f"Failed to initialize MQTT: {e}")
-            raise
+            logger.error(f"Unexpected error initializing MQTT: {e}")
+            logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
+            if self.client:
+                try:
+                    self.client.loop_stop()
+                except:
+                    pass
+            self.client = None
 
     def _on_connect(self, client, userdata, flags, rc):
         """Callback when connected to MQTT broker"""
@@ -235,7 +252,7 @@ class MQTTManager:
             "name": "Oxidising Gases",
             "unique_id": "airsensor_oxi",
             "state_topic": f"{self.base_topic}/oxi",
-            "unit_of_measurement": "Ω",
+            "unit_of_measurement": "Ω",
             "state_class": "measurement",
             "icon": "mdi:molecule"
         })
@@ -244,7 +261,7 @@ class MQTTManager:
             "name": "Reducing Gases",
             "unique_id": "airsensor_red",
             "state_topic": f"{self.base_topic}/red",
-            "unit_of_measurement": "Ω",
+            "unit_of_measurement": "Ω",
             "state_class": "measurement",
             "icon": "mdi:molecule"
         })
@@ -253,7 +270,7 @@ class MQTTManager:
             "name": "Ammonia",
             "unique_id": "airsensor_nh3",
             "state_topic": f"{self.base_topic}/nh3",
-            "unit_of_measurement": "Ω",
+            "unit_of_measurement": "Ω",
             "state_class": "measurement",
             "icon": "mdi:molecule"
         })
@@ -272,8 +289,8 @@ class MQTTManager:
 
     def publish_data(self, data: Dict[str, Any]):
         """Publish sensor data to MQTT"""
-        if not self.connected:
-            logger.warning("Not connected to MQTT broker")
+        if not self.client or not self.connected:
+            logger.debug("Not connected to MQTT broker - skipping publish")
             return
 
         try:
@@ -284,12 +301,12 @@ class MQTTManager:
                 self.client.publish(f"{self.base_topic}/co2", scd41.co2)
 
             pms = data.get('pms5003')
-                # Only publish PM data if PM sensor is enabled and data available
-            if pms.pm1 is not None:
+            # Only publish PM data if PM sensor is enabled and data available
+            if pms and pms.pm1 is not None:
                 self.client.publish(f"{self.base_topic}/pm1", round(pms.pm1, 1))
-            if pms.pm25 is not None:
+            if pms and pms.pm25 is not None:
                 self.client.publish(f"{self.base_topic}/pm25", round(pms.pm25, 1))
-            if pms.pm10 is not None:
+            if pms and pms.pm10 is not None:
                 self.client.publish(f"{self.base_topic}/pm10", round(pms.pm10, 1))
 
             # Temperature and Humidity - based on mode
@@ -311,16 +328,17 @@ class MQTTManager:
                     self.client.publish(f"{self.base_topic}/humidity_diagnostic", round(enviro.humidity, 1))
 
             # Other Enviro+ sensors (always published if available)
-            if enviro.pressure is not None:
-                self.client.publish(f"{self.base_topic}/pressure", round(enviro.pressure, 1))
-            if enviro.lux is not None:
-                self.client.publish(f"{self.base_topic}/lux", round(enviro.lux, 1))
-            if enviro.oxidising is not None:
-                self.client.publish(f"{self.base_topic}/oxi", enviro.oxidising)
-            if enviro.reducing is not None:
-                self.client.publish(f"{self.base_topic}/red", enviro.reducing)
-            if enviro.nh3 is not None:
-                self.client.publish(f"{self.base_topic}/nh3", enviro.nh3)
+            if enviro:
+                if enviro.pressure is not None:
+                    self.client.publish(f"{self.base_topic}/pressure", round(enviro.pressure, 1))
+                if enviro.lux is not None:
+                    self.client.publish(f"{self.base_topic}/lux", round(enviro.lux, 1))
+                if enviro.oxidising is not None:
+                    self.client.publish(f"{self.base_topic}/oxi", enviro.oxidising)
+                if enviro.reducing is not None:
+                    self.client.publish(f"{self.base_topic}/red", enviro.reducing)
+                if enviro.nh3 is not None:
+                    self.client.publish(f"{self.base_topic}/nh3", enviro.nh3)
 
             logger.debug("Published sensor data to MQTT")
 
@@ -330,9 +348,12 @@ class MQTTManager:
     def close(self):
         """Clean shutdown"""
         if self.client:
-            self.client.loop_stop()
-            self.client.disconnect()
-            logger.info("MQTT client closed")
+            try:
+                self.client.loop_stop()
+                self.client.disconnect()
+                logger.info("MQTT client closed")
+            except:
+                pass
 
 
 if __name__ == "__main__":
