@@ -63,7 +63,7 @@ class MQTTManager:
             port = self.config.get('mqtt', {}).get('port', 1883)
 
             logger.info(f"Connecting to MQTT broker at {broker}:{port}")
-            
+
             try:
                 self.client.connect(broker, port, 60)
             except OSError as e:
@@ -84,7 +84,7 @@ class MQTTManager:
                 return
             except (ConnectionRefusedError, TimeoutError) as e:
                 logger.error(f"Connection to MQTT broker at {broker}:{port} failed: {e}")
-                logger.error("→ Check if MQTT broker is running and accessible")
+                logger.error("Check if MQTT broker is running and accessible")
                 logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
                 self.client = None
                 return
@@ -98,17 +98,9 @@ class MQTTManager:
             while not self.connected and (time.time() - start) < timeout:
                 time.sleep(0.1)
 
-            if self.connected:
-                logger.info("MQTT connected successfully")
+            if not self.connected:
 
-                # Publish online status
-                self.client.publish(self.availability_topic, "online", qos=1, retain=True)
-
-                # Send discovery messages if enabled
-                if self.config.get('mqtt', {}).get('discovery', True):
-                    self._send_discovery()
-            else:
-                logger.error("MQTT failed to connect after retrying.")
+                logger.error("MQTT failed to connect.")
                 logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
                 self.client.loop_stop()
                 self.client = None
@@ -131,7 +123,15 @@ class MQTTManager:
         """Callback when connected to MQTT broker"""
         if rc == 0:
             self.connected = True
-            logger.info("Connected to MQTT broker")
+            logger.info("Connected to MQTT broker.")
+
+            # Publish online status
+            self.client.publish(self.availability_topic, "online", qos=1, retain=True)
+
+            # Send discovery messages if enabled
+            if self.config.get('mqtt', {}).get('discovery', True):
+                self._send_discovery()
+
         else:
             # Provide friendly error messages for connection failures
             error_messages = {
@@ -144,7 +144,6 @@ class MQTTManager:
 
             error_msg = error_messages.get(rc, f"Connection failed with unknown code {rc}")
             logger.error(f"MQTT connection failed: {error_msg}")
-
 
     def _on_disconnect(self, client, userdata, rc):
         """Callback when disconnected from MQTT broker"""
