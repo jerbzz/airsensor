@@ -21,6 +21,13 @@ class MQTTManager:
         self.base_topic = config.get('mqtt', {}).get('base_topic', 'airsensor')
         self.discovery_prefix = config.get('mqtt', {}).get('discovery_prefix', 'homeassistant')
         self.device_info = config.get('mqtt', {}).get('device', {})
+
+        # Availability topics
+        self.availability_topic = f"{self.base_topic}/availability"  # Device-level
+        self.scd41_availability = f"{self.base_topic}/scd41/availability"
+        self.pms5003_availability = f"{self.base_topic}/pms5003/availability"
+        # Note: Enviro+ sensors use device-level availability only (always present if device is online)
+
         self._initialize()
 
     def _initialize(self):
@@ -35,6 +42,15 @@ class MQTTManager:
             # Set callbacks
             self.client.on_connect = self._on_connect
             self.client.on_disconnect = self._on_disconnect
+
+            # Configure Last Will and Testament (LWT)
+            # If device disconnects unexpectedly, broker will publish "offline"
+            self.client.will_set(
+                self.availability_topic,
+                payload="offline",
+                qos=1,
+                retain=True
+            )
 
             # Set credentials if provided
             username = self.config['mqtt'].get('username')
@@ -85,6 +101,9 @@ class MQTTManager:
             if self.connected:
                 logger.info("MQTT connected successfully")
 
+                # Publish online status
+                self.client.publish(self.availability_topic, "online", qos=1, retain=True)
+
                 # Send discovery messages if enabled
                 if self.config.get('mqtt', {}).get('discovery', True):
                     self._send_discovery()
@@ -122,16 +141,10 @@ class MQTTManager:
                 4: "Connection refused - bad username or password. Check your MQTT credentials in config.yaml.",
                 5: "Connection refused - not authorized. Your MQTT user may not have permission to connect. Check Home Assistant MQTT user settings.",
             }
-            
+
             error_msg = error_messages.get(rc, f"Connection failed with unknown code {rc}")
             logger.error(f"MQTT connection failed: {error_msg}")
-            
-            # Provide specific help for common issues
-            if rc == 4 or rc == 5:
-                logger.error("Check your MQTT username and password in config.yaml")
-            elif rc == 3:
-                broker = self.config.get('mqtt', {}).get('broker', 'homeassistant.local')
-                logger.error(f"Check if MQTT broker is running at {broker}")
+
 
     def _on_disconnect(self, client, userdata, rc):
         """Callback when disconnected from MQTT broker"""
@@ -146,12 +159,12 @@ class MQTTManager:
                 5: "Disconnected - not authorized",
                 7: "Disconnected - connection lost (network issue or broker restart)",
             }
-            
+
             error_msg = disconnect_messages.get(rc, f"Unexpected disconnection (code {rc})")
             logger.warning(f"MQTT {error_msg}")
-            
+
             if rc == 7:
-                logger.info("Will attempt to reconnect automatically...")
+                logger.info("MQTT connection lost - Will attempt to reconnect automatically...")
 
     def _send_discovery(self):
         """Send Home Assistant MQTT discovery messages"""
@@ -178,12 +191,17 @@ class MQTTManager:
                 "unit_of_measurement": "ppm",
                 "device_class": "carbon_dioxide",
                 "state_class": "measurement",
-                "icon": "mdi:molecule-co2"
+                "icon": "mdi:molecule-co2",
+                "availability": [
+                    {"topic": self.availability_topic, "payload_available": "online", "payload_not_available": "offline"},
+                    {"topic": self.scd41_availability, "payload_available": "online", "payload_not_available": "offline"}
+                ],
+                "availability_mode": "all"
             })
 
         # Temperature and Humidity - based on mode
         if not self.scd41_enabled:
-            # Only BME280 temperature and humidity
+            # Only BME280 temperature and humidity - use device-level availability
             sensors.extend([
                 {
                     "name": "Temperature",
@@ -191,7 +209,12 @@ class MQTTManager:
                     "state_topic": f"{self.base_topic}/temperature",
                     "unit_of_measurement": "°C",
                     "device_class": "temperature",
-                    "state_class": "measurement"
+                    "state_class": "measurement",
+                    "availability": {
+                        "topic": self.availability_topic,
+                        "payload_available": "online",
+                        "payload_not_available": "offline"
+                    }
                 },
                 {
                     "name": "Humidity",
@@ -199,7 +222,12 @@ class MQTTManager:
                     "state_topic": f"{self.base_topic}/humidity",
                     "unit_of_measurement": "%",
                     "device_class": "humidity",
-                    "state_class": "measurement"
+                    "state_class": "measurement",
+                    "availability": {
+                        "topic": self.availability_topic,
+                        "payload_available": "online",
+                        "payload_not_available": "offline"
+                    }
                 }
             ])
 
@@ -212,7 +240,12 @@ class MQTTManager:
                     "state_topic": f"{self.base_topic}/temperature",
                     "unit_of_measurement": "°C",
                     "device_class": "temperature",
-                    "state_class": "measurement"
+                    "state_class": "measurement",
+                    "availability": [
+                        {"topic": self.availability_topic, "payload_available": "online", "payload_not_available": "offline"},
+                        {"topic": self.scd41_availability, "payload_available": "online", "payload_not_available": "offline"}
+                    ],
+                    "availability_mode": "all"
                 },
                 {
                     "name": "Humidity",
@@ -220,7 +253,12 @@ class MQTTManager:
                     "state_topic": f"{self.base_topic}/humidity",
                     "unit_of_measurement": "%",
                     "device_class": "humidity",
-                    "state_class": "measurement"
+                    "state_class": "measurement",
+                    "availability": [
+                        {"topic": self.availability_topic, "payload_available": "online", "payload_not_available": "offline"},
+                        {"topic": self.scd41_availability, "payload_available": "online", "payload_not_available": "offline"}
+                    ],
+                    "availability_mode": "all"
                 },
                 {
                     "name": "Temperature (BME280)",
@@ -229,7 +267,12 @@ class MQTTManager:
                     "unit_of_measurement": "°C",
                     "device_class": "temperature",
                     "state_class": "measurement",
-                    "entity_category": "diagnostic"
+                    "entity_category": "diagnostic",
+                    "availability": {
+                        "topic": self.availability_topic,
+                        "payload_available": "online",
+                        "payload_not_available": "offline"
+                    }
                 },
                 {
                     "name": "Humidity (BME280)",
@@ -238,22 +281,31 @@ class MQTTManager:
                     "unit_of_measurement": "%",
                     "device_class": "humidity",
                     "state_class": "measurement",
-                    "entity_category": "diagnostic"
+                    "entity_category": "diagnostic",
+                    "availability": {
+                        "topic": self.availability_topic,
+                        "payload_available": "online",
+                        "payload_not_available": "offline"
+                    }
                 }
             ])
 
-        # Pressure (always from Enviro+)
+        # Pressure (always from Enviro+) - device-level availability only
         sensors.append({
             "name": "Pressure",
             "unique_id": "airsensor_pressure",
             "state_topic": f"{self.base_topic}/pressure",
             "unit_of_measurement": "hPa",
             "device_class": "pressure",
-            "state_class": "measurement"
+            "state_class": "measurement",
+            "availability": {
+                "topic": self.availability_topic,
+                "payload_available": "online",
+                "payload_not_available": "offline"
+            }
         })
 
-        # Particulate Matter sensors (only if PM sensor enabled - will be checked in publish)
-
+        # Particulate Matter sensors (only if PM sensor enabled)
         if self.pms5003_enabled:
             sensors.extend([
                 {
@@ -263,7 +315,12 @@ class MQTTManager:
                     "unit_of_measurement": "μg/m³",
                     "device_class": "pm1",
                     "state_class": "measurement",
-                    "icon": "mdi:smoke"
+                    "icon": "mdi:smoke",
+                    "availability": [
+                        {"topic": self.availability_topic, "payload_available": "online", "payload_not_available": "offline"},
+                        {"topic": self.pms5003_availability, "payload_available": "online", "payload_not_available": "offline"}
+                    ],
+                    "availability_mode": "all"
                 },
                 {
                     "name": "PM2.5",
@@ -272,7 +329,12 @@ class MQTTManager:
                     "unit_of_measurement": "μg/m³",
                     "device_class": "pm25",
                     "state_class": "measurement",
-                    "icon": "mdi:smoke"
+                    "icon": "mdi:smoke",
+                    "availability": [
+                        {"topic": self.availability_topic, "payload_available": "online", "payload_not_available": "offline"},
+                        {"topic": self.pms5003_availability, "payload_available": "online", "payload_not_available": "offline"}
+                    ],
+                    "availability_mode": "all"
                 },
                 {
                     "name": "PM10",
@@ -281,28 +343,43 @@ class MQTTManager:
                     "unit_of_measurement": "μg/m³",
                     "device_class": "pm10",
                     "state_class": "measurement",
-                    "icon": "mdi:smoke"
+                    "icon": "mdi:smoke",
+                    "availability": [
+                        {"topic": self.availability_topic, "payload_available": "online", "payload_not_available": "offline"},
+                        {"topic": self.pms5003_availability, "payload_available": "online", "payload_not_available": "offline"}
+                    ],
+                    "availability_mode": "all"
                 }
             ])
 
-        # Light sensor
+        # Light sensor - device-level availability only
         sensors.append({
             "name": "Light Level",
             "unique_id": "airsensor_lux",
             "state_topic": f"{self.base_topic}/lux",
             "unit_of_measurement": "lx",
             "device_class": "illuminance",
-            "state_class": "measurement"
+            "state_class": "measurement",
+            "availability": {
+                "topic": self.availability_topic,
+                "payload_available": "online",
+                "payload_not_available": "offline"
+            }
         })
 
-        # MICS6814
+        # MICS6814 Gas Sensors - device-level availability only
         sensors.append({
             "name": "Oxidising Gases",
             "unique_id": "airsensor_oxi",
             "state_topic": f"{self.base_topic}/oxi",
             "unit_of_measurement": "Ω",
             "state_class": "measurement",
-            "icon": "mdi:molecule"
+            "icon": "mdi:molecule",
+            "availability": {
+                "topic": self.availability_topic,
+                "payload_available": "online",
+                "payload_not_available": "offline"
+            }
         })
 
         sensors.append({
@@ -311,7 +388,12 @@ class MQTTManager:
             "state_topic": f"{self.base_topic}/red",
             "unit_of_measurement": "Ω",
             "state_class": "measurement",
-            "icon": "mdi:molecule"
+            "icon": "mdi:molecule",
+            "availability": {
+                "topic": self.availability_topic,
+                "payload_available": "online",
+                "payload_not_available": "offline"
+            }
         })
 
         sensors.append({
@@ -320,7 +402,12 @@ class MQTTManager:
             "state_topic": f"{self.base_topic}/nh3",
             "unit_of_measurement": "Ω",
             "state_class": "measurement",
-            "icon": "mdi:molecule"
+            "icon": "mdi:molecule",
+            "availability": {
+                "topic": self.availability_topic,
+                "payload_available": "online",
+                "payload_not_available": "offline"
+            }
         })
 
         # Send discovery for each sensor
@@ -342,41 +429,57 @@ class MQTTManager:
             return
 
         try:
+            # Publish device-level online status heartbeat
+            self.client.publish(self.availability_topic, "online", qos=1, retain=True)
 
             # CO2 (only if SCD41 enabled and available)
             scd41 = data.get('scd41')
-            if scd41:
+            if scd41 and scd41.co2 is not None:
+                # SCD41 is working - publish availability and data
+                self.client.publish(self.scd41_availability, "online", qos=1, retain=True)
                 self.client.publish(f"{self.base_topic}/co2", scd41.co2)
 
-            pms = data.get('pms5003')
-            # Only publish PM data if PM sensor is enabled and data available
-            if pms and pms.pm1 is not None:
-                self.client.publish(f"{self.base_topic}/pm1", round(pms.pm1, 1))
-            if pms and pms.pm25 is not None:
-                self.client.publish(f"{self.base_topic}/pm25", round(pms.pm25, 1))
-            if pms and pms.pm10 is not None:
-                self.client.publish(f"{self.base_topic}/pm10", round(pms.pm10, 1))
-
-            # Temperature and Humidity - based on mode
-            enviro = data.get('enviro')
-
-            if not self.scd41_enabled:
-                # Only BME280
-                if enviro and enviro.temperature is not None:
-                    self.client.publish(f"{self.base_topic}/temperature", round(enviro.temperature, 1))
-                    self.client.publish(f"{self.base_topic}/humidity", round(enviro.humidity, 1))
-
-            else:
-                # SCD41 as primary, BME280 as diagnostic
-                if scd41:
+                if self.scd41_enabled:
+                    # SCD41 is primary source for temp/humidity
                     self.client.publish(f"{self.base_topic}/temperature", round(scd41.temperature, 1))
                     self.client.publish(f"{self.base_topic}/humidity", round(scd41.humidity, 1))
-                if enviro and enviro.temperature is not None:
+            else:
+                # SCD41 not working or not available
+                self.client.publish(self.scd41_availability, "offline", qos=1, retain=True)
+
+            # PMS5003 sensor group
+            # Only mark as unavailable if sensor actually failed to read (not just sleeping)
+            pms = data.get('pms5003')
+            if pms:
+                # We got a PMS5003Data object - check if it has actual data or is just empty (sleeping)
+                if pms.pm25 is not None:
+                    # PM sensor successfully read data - publish availability and data
+                    self.client.publish(self.pms5003_availability, "online", qos=1, retain=True)
+                    if pms.pm1 is not None:
+                        self.client.publish(f"{self.base_topic}/pm1", round(pms.pm1, 1))
+                    if pms.pm25 is not None:
+                        self.client.publish(f"{self.base_topic}/pm25", round(pms.pm25, 1))
+                    if pms.pm10 is not None:
+                        self.client.publish(f"{self.base_topic}/pm10", round(pms.pm10, 1))
+                # If pms.pm25 is None, sensor is sleeping or warming up - don't change availability status
+                # This prevents "Unavailable" flashing during normal sleep cycles
+            else:
+                # No PMS5003Data object at all - sensor initialization failed
+                self.client.publish(self.pms5003_availability, "offline", qos=1, retain=True)
+
+            # Enviro+ sensors (no separate availability - always available if device is online)
+            enviro = data.get('enviro')
+            if enviro:
+                # Temperature and humidity (if SCD41 not primary)
+                if not self.scd41_enabled and enviro.temperature is not None:
+                    self.client.publish(f"{self.base_topic}/temperature", round(enviro.temperature, 1))
+                    self.client.publish(f"{self.base_topic}/humidity", round(enviro.humidity, 1))
+                elif self.scd41_enabled and enviro.temperature is not None:
+                    # Publish as diagnostic sensors
                     self.client.publish(f"{self.base_topic}/temperature_diagnostic", round(enviro.temperature, 1))
                     self.client.publish(f"{self.base_topic}/humidity_diagnostic", round(enviro.humidity, 1))
 
-            # Other Enviro+ sensors (always published if available)
-            if enviro:
+                # Other Enviro+ sensors
                 if enviro.pressure is not None:
                     self.client.publish(f"{self.base_topic}/pressure", round(enviro.pressure, 1))
                 if enviro.lux is not None:
@@ -397,6 +500,13 @@ class MQTTManager:
         """Clean shutdown"""
         if self.client:
             try:
+                # Publish offline status for device and sensor groups
+                self.client.publish(self.availability_topic, "offline", qos=1, retain=True)
+                self.client.publish(self.scd41_availability, "offline", qos=1, retain=True)
+                self.client.publish(self.pms5003_availability, "offline", qos=1, retain=True)
+                # Note: Enviro+ sensors use device-level availability only
+
+                time.sleep(0.5)  # Give time for messages to send
                 self.client.loop_stop()
                 self.client.disconnect()
                 logger.info("MQTT client closed")
