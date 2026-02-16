@@ -6,13 +6,13 @@ general:
 
 # SCD41 CO2 Sensor Settings (Optional Add-on - connect to GPIO breakouts on Enviro+)
 scd41:
-  enabled: true  # Set to true if you have the SCD41 sensor
-  altitude: 150  # meters above sea level (for pressure compensation)
+  enabled: false  # Set to true if you have the SCD41 sensor
+  altitude: 0  # meters above sea level (for pressure compensation)
   temperature_offset: 2.0  # degrees C to compensate for self-heating
 
  # PMS5003 Particulate Matter Sensor (Optional Add-on)
 pms5003:
-  enabled: true
+  enabled: false
   serialport: /dev/ttyS0  # may be /dev/ttyAMA0 for older Pis
 
   # PM Sensor Power Management (extends sensor lifetime)
@@ -39,7 +39,7 @@ display:
 
 # MQTT Settings for Home Assistant
 mqtt:
-  enabled: true
+  enabled: false
   broker: "homeassistant.local"  # MQTT broker address (often same as Home Assistant)
   port: 1883
   username: ""  # Leave empty if no authentication required
