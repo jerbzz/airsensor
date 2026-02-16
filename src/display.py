@@ -91,7 +91,7 @@ class DisplayManager:
     def _show_startup(self):
         """Show startup screen"""
         self.draw.rectangle((0, 0, WIDTH, HEIGHT), (0, 0, 0))
-        self.draw.text((10, 25), "Air Quality Sensor", font=self.fonts['large'], fill=(0, 255, 0))
+        self.draw.text((10, 25), "Enviro+", font=self.fonts['large'], fill=(0, 255, 0))
         self.draw.text((10, 50), "Initialising...", font=self.fonts['small'], fill=(255, 255, 255))
         self.disp.display(self.img)
 
@@ -352,7 +352,8 @@ class DisplayManager:
         if self.disp:
             self.clear()
             self.disp.display(self.img)
-            logger.info("Display closed")
+            self.disp.set_backlight(0)
+            logger.info("Display closed and backlight switched off.")
 
 
 if __name__ == "__main__":
