@@ -50,8 +50,33 @@ class MQTTManager:
             
             try:
                 self.client.connect(broker, port, 60)
-            except (OSError, ConnectionRefusedError, TimeoutError) as e:
-                logger.error(f"Failed to connect to MQTT broker at {broker}:{port}: {e}")
+            except OSError as e:
+                # OSError includes socket.gaierror (name resolution) and other network errors
+                if "Name or service not known" in str(e) or "nodename nor servname provided" in str(e):
+                    logger.error(f"Failed to resolve MQTT broker hostname '{broker}'")
+                    logger.error("→ Check that the broker hostname/IP is correct in config.yaml")
+                    logger.error("→ Try using an IP address instead of hostname (e.g., 192.168.1.100)")
+                    logger.error(f"→ Test with: ping {broker}")
+                elif "Connection refused" in str(e):
+                    logger.error(f"MQTT broker at {broker}:{port} refused the connection")
+                    logger.error("→ Check if MQTT broker is running")
+                    logger.error("→ Verify the port number (default: 1883)")
+                    logger.error(f"→ Test with: nc -zv {broker} {port}")
+                elif "No route to host" in str(e):
+                    logger.error(f"No network route to MQTT broker at {broker}")
+                    logger.error("→ Check your network connection")
+                    logger.error("→ Verify the broker is on the same network or accessible")
+                else:
+                    logger.error(f"Network error connecting to MQTT broker at {broker}:{port}: {e}")
+                    logger.error("→ Check network connectivity and firewall settings")
+                
+                logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
+                self.client = None
+                return
+            except (ConnectionRefusedError, TimeoutError) as e:
+                logger.error(f"Connection to MQTT broker at {broker}:{port} failed: {e}")
+                logger.error("→ Check if MQTT broker is running and accessible")
+                logger.error("→ Verify firewall isn't blocking port 1883")
                 logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
                 self.client = None
                 return
@@ -97,13 +122,46 @@ class MQTTManager:
             self.connected = True
             logger.info("Connected to MQTT broker")
         else:
-            logger.error(f"MQTT connection failed with code {rc}")
+            # Provide friendly error messages for connection failures
+            error_messages = {
+                1: "Connection refused - incorrect protocol version. Check your MQTT broker version.",
+                2: "Connection refused - invalid client identifier. Try changing the client ID.",
+                3: "Connection refused - server unavailable. MQTT broker may be down or not accepting connections.",
+                4: "Connection refused - bad username or password. Check your MQTT credentials in config.yaml.",
+                5: "Connection refused - not authorized. Your MQTT user may not have permission to connect. Check Home Assistant MQTT user settings.",
+            }
+            
+            error_msg = error_messages.get(rc, f"Connection failed with unknown code {rc}")
+            logger.error(f"MQTT connection failed: {error_msg}")
+            
+            # Provide specific help for common issues
+            if rc == 4 or rc == 5:
+                logger.error("→ Check your MQTT username and password in config.yaml")
+                logger.error("→ Verify the user exists in Home Assistant (Settings → Devices & Services → MQTT)")
+            elif rc == 3:
+                broker = self.config.get('mqtt', {}).get('broker', 'homeassistant.local')
+                logger.error(f"→ Check if MQTT broker is running at {broker}")
+                logger.error("→ Verify Home Assistant is accessible on your network")
 
     def _on_disconnect(self, client, userdata, rc):
         """Callback when disconnected from MQTT broker"""
         self.connected = False
         if rc != 0:
-            logger.warning(f"Unexpected MQTT disconnection (code {rc})")
+            # Provide friendly disconnect messages
+            disconnect_messages = {
+                1: "Disconnected - incorrect protocol version",
+                2: "Disconnected - invalid client identifier",
+                3: "Disconnected - server unavailable",
+                4: "Disconnected - bad username or password",
+                5: "Disconnected - not authorized",
+                7: "Disconnected - connection lost (network issue or broker restart)",
+            }
+            
+            error_msg = disconnect_messages.get(rc, f"Unexpected disconnection (code {rc})")
+            logger.warning(f"MQTT {error_msg}")
+            
+            if rc == 7:
+                logger.info("Will attempt to reconnect automatically...")
 
     def _send_discovery(self):
         """Send Home Assistant MQTT discovery messages"""
