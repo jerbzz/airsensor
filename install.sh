@@ -8,13 +8,13 @@ echo "Installing Airsensor Python Application..."
 echo "Your password may be required to install system files."
 
 if [ "$(id -u)" -eq 0 ]; then
-    fatal "Script should not be run as root. Try './install.sh'\n"
+    fatal "This script should not be run as root. Try './install.sh'\n"
 fi
 
 # Check if running on Raspberry Pi
 if ! grep -q "Raspberry Pi" /proc/cpuinfo; then
     echo "Warning: This device doesn't appear to be a Raspberry Pi."
-    read -p "Continue anyway? (y/n) " -n 1 -r
+    read -p "This software may not work at all. Continue anyway? (y/n) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         exit 1
@@ -49,6 +49,7 @@ if id "airsensor" >/dev/null 2>&1; then
 else
     sudo useradd --system --no-create-home --shell /usr/sbin/nologin -U airsensor
 fi
+
 # Add to various groups to enable hardware access
 sudo usermod -a -G gpio airsensor      # GPIO access
 sudo usermod -a -G i2c airsensor       # I2C sensors (BME280, LTR559, etc.)
@@ -101,7 +102,6 @@ fi
 # Install systemd service
 sudo cp /opt/airsensor/airsensor.service /etc/systemd/system/
 sudo systemctl enable airsensor
-
 
 echo "Installation Complete!"
 echo ""
