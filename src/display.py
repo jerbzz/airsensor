@@ -26,9 +26,9 @@ class DisplayManager:
         self.fonts = {}
         self.current_screen = 0
         self.screens = config.get('screens')
-        self._initialize()
+        self._initialise()
 
-    def _initialize(self):
+    def _initialise(self):
         """Initialise the display"""
         try:
             from ST7735 import ST7735

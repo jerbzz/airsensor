@@ -83,32 +83,30 @@ class Airsensor:
         logger.info(f"Received signal {signum}, shutting down...")
         self.stop()
 
-    def initialize(self):
-        """Initialize all components"""
-        logger.info("=" * 60)
-        logger.info("CO2 Monitor Starting...")
-        logger.info("=" * 60)
+    def initialise(self):
+        """Initialise all components"""
+        logger.info("Enviro+ Air Quality Sensor Service is starting...")
 
         try:
-            # Initialize sensors
-            logger.info("Initializing sensors...")
-            self.sensors = SensorManager(self.config)
-
-            # Initialize display
+            # Initialise display
             if self.config['display']['enabled']:
-                logger.info("Initializing display...")
+                logger.info("Initialising display...")
                 self.display = DisplayManager(self.config['display'])
 
-            # Initialize MQTT
+            # Initialise sensors
+            logger.info("Initialising sensors...")
+            self.sensors = SensorManager(self.config)
+
+            # Initialise MQTT
             if self.config['mqtt']['enabled']:
-                logger.info("Initializing MQTT...")
+                logger.info("Initialising MQTT...")
                 self.mqtt = MQTTManager(self.config)
 
-            logger.info("Initialization complete!")
+            logger.info("Initialisation complete!")
             logger.info("=" * 60)
 
         except Exception as e:
-            logger.error(f"Initialization failed: {e}")
+            logger.error(f"Initialisation failed: {e}")
             raise
 
     def run(self):
@@ -210,17 +208,12 @@ class Airsensor:
 
 def main():
     """Entry point"""
-    # Print banner
-    print("\n" + "=" * 60)
-    print("  Air Quality Sensor")
-    print("  Raspberry Pi Zero 2 W + Enviro+")
-    print("=" * 60 + "\n")
 
     # Create and run application
     app = Airsensor()
 
     try:
-        app.initialize()
+        app.initialise()
         app.run()
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)

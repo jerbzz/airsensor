@@ -28,14 +28,14 @@ class MQTTManager:
         self.pms5003_availability = f"{self.base_topic}/pms5003/availability"
         # Note: Enviro+ sensors use device-level availability only (always present if device is online)
 
-        self._initialize()
+        self._initialise()
 
-    def _initialize(self):
-        """Initialize MQTT client"""
+    def _initialise(self):
+        """Initialise MQTT client"""
         try:
             import paho.mqtt.client as mqtt
 
-            logger.info("Initializing MQTT client...")
+            logger.info("Initialising MQTT client...")
 
             self.client = mqtt.Client()
 
@@ -110,7 +110,7 @@ class MQTTManager:
             logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
             self.client = None
         except Exception as e:
-            logger.error(f"Unexpected error initializing MQTT: {e}")
+            logger.error(f"Unexpected error initialising MQTT: {e}")
             logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
             if self.client:
                 try:
@@ -463,7 +463,7 @@ class MQTTManager:
                 # If pms.pm25 is None, sensor is sleeping or warming up - don't change availability status
                 # This prevents "Unavailable" flashing during normal sleep cycles
             else:
-                # No PMS5003Data object at all - sensor initialization failed
+                # No PMS5003Data object at all - sensor initialisation failed
                 self.client.publish(self.pms5003_availability, "offline", qos=1, retain=True)
 
             # Enviro+ sensors (no separate availability - always available if device is online)

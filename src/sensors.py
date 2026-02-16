@@ -59,14 +59,14 @@ class SCD41Sensor:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.sensor = None
-        self._initialize()
+        self._initialise()
 
-    def _initialize(self):
-        """Initialize the SCD41 sensor"""
+    def _initialise(self):
+        """Initialise the SCD41 sensor"""
         try:
             from scd4x import SCD4X
 
-            logger.info("Initializing SCD41 sensor...")
+            logger.info("Initialising SCD41 sensor...")
             self.sensor = SCD4X(quiet=False)
 
             # Set altitude compensation
@@ -90,7 +90,7 @@ class SCD41Sensor:
             logger.error("SCD4X library not found. Install with: pip3 install scd4x")
             raise
         except Exception as e:
-            logger.error(f"Failed to initialize SCD41: {e}")
+            logger.error(f"Failed to initialise SCD41: {e}")
             raise
 
     def read(self) -> Optional[SCD41Data]:
@@ -137,19 +137,19 @@ class PMS5003Sensor:
         self.pm_timestamp = 0
         self.PM_WARMUP_TIME = config.get('pm_warmup_time', 30)  # seconds
         self.PM_SLEEP_DURATION = config.get('pm_sleep_duration', 180)  # seconds
-        self.pm_gpio_initialized = False
+        self.pm_gpio_initialised = False
         # Caching of last read value for when sensor is sleeping
         self.last_pm1 = None
         self.last_pm25 = None
         self.last_pm10 = None
 
-        self._initialize()
+        self._initialise()
 
-    def _initialize(self):
+    def _initialise(self):
         try:
             from pms5003 import PMS5003
 
-            # Initialize GPIO for PM sensor control
+            # Initialise GPIO for PM sensor control
             if self.config.get('pm_sleep_enabled', True):
                 try:
                     # Set up GPIO
@@ -159,19 +159,19 @@ class PMS5003Sensor:
 
                     # Start with sensor awake (HIGH)
                     GPIO.output(PM_ENABLE_PIN, GPIO.HIGH)
-                    self.pm_gpio_initialized = True
+                    self.pm_gpio_initialised = True
                     logger.info(f"GPIO{PM_ENABLE_PIN} configured for PM sensor control")
 
                 except Exception as e:
-                    logger.error(f"Failed to initialize GPIO for PM sensor: {e}")
+                    logger.error(f"Failed to initialise GPIO for PM sensor: {e}")
 
-            # Initialize PMS5003 sensor (without GPIO parameters)
+            # Initialise PMS5003 sensor (without GPIO parameters)
             self.pms5003 = PMS5003(device=self.config.get('serialport'))
 
-            logger.info("PMS5003 initialized")
+            logger.info("PMS5003 initialised")
 
         except Exception as e:
-            logger.error(f"Failed to initialize PMS5003: {e}")
+            logger.error(f"Failed to initialise PMS5003: {e}")
             import traceback
             traceback.print_exc()
 
@@ -195,7 +195,7 @@ class PMS5003Sensor:
         Wake up PM sensor by setting GPIO22 HIGH.
         Returns True if ready to read, False if still warming up.
         """
-        if not self.pms5003 or not self.pm_gpio_initialized:
+        if not self.pms5003 or not self.pm_gpio_initialised:
             return self.pms5003 is not None  # If no GPIO, sensor is always "awake"
 
         # If already awake, check if warmup is complete
@@ -222,7 +222,7 @@ class PMS5003Sensor:
 
     def _sleep_pm_sensor(self):
         """Put PM sensor to sleep by setting GPIO22 LOW"""
-        if not self.pms5003 or not self.pm_awake or not self.pm_gpio_initialized:
+        if not self.pms5003 or not self.pm_awake or not self.pm_gpio_initialised:
             return
 
         if not self.config.get('pm_sleep_enabled', True):
@@ -282,7 +282,7 @@ class PMS5003Sensor:
                     # Put sensor back to sleep
                     self._sleep_pm_sensor()
             else:
-                if self.pm_gpio_initialized and self.pm_timestamp > 0:
+                if self.pm_gpio_initialised and self.pm_timestamp > 0:
                     time_until_wake = self.PM_SLEEP_DURATION - (time.time() - self.pm_timestamp)
                     logger.debug(f"PM sensor sleeping (wake in {time_until_wake:.0f}s)")
 
@@ -294,8 +294,8 @@ class PMS5003Sensor:
     def close(self):
         """Clean shutdown"""
         # Sleep PM sensor before closing (recommended)
-        logger.debug(f"Closing PM sensor {self.pms5003 is not None}, {self.pm_gpio_initialized}")
-        if self.pms5003 is not None and self.pm_gpio_initialized:
+        logger.debug(f"Closing PM sensor {self.pms5003 is not None}, {self.pm_gpio_initialised}")
+        if self.pms5003 is not None and self.pm_gpio_initialised:
             self._sleep_pm_sensor()
 
 class EnviroSensor:
@@ -305,11 +305,11 @@ class EnviroSensor:
         self.bme280 = None
         self.gas = None
         self.light = None
-        self._initialize()
+        self._initialise()
 
-    def _initialize(self):
-        """Initialize Enviro+ sensors"""
-        logger.info("Initializing Enviro+ sensors...")
+    def _initialise(self):
+        """Initialise Enviro+ sensors"""
+        logger.info("Initialising Enviro+ sensors...")
 
         # BME280 - Temperature, Humidity, Pressure
         try:
@@ -318,25 +318,25 @@ class EnviroSensor:
 
             bus = SMBus(1)
             self.bme280 = BME280(i2c_dev=bus)
-            logger.info("BME280 initialized (temp, humidity, pressure)")
+            logger.info("BME280 initialised (temp, humidity, pressure)")
         except Exception as e:
-            logger.error(f"Failed to initialize BME280: {e}")
+            logger.error(f"Failed to initialise BME280: {e}")
 
         # MICS6814 - Gas Sensors
         try:
             from enviroplus import gas
             self.gas = gas
-            logger.info("Gas sensors initialized")
+            logger.info("Gas sensors initialised")
         except Exception as e:
-            logger.error(f"Failed to initialize gas sensors: {e}")
+            logger.error(f"Failed to initialise gas sensors: {e}")
 
         # LTR559 - Light and Proximity
         try:
             from ltr559 import LTR559
             self.light = LTR559()
-            logger.info("LTR559 initialized (light, proximity)")
+            logger.info("LTR559 initialised (light, proximity)")
         except Exception as e:
-            logger.error(f"Failed to initialize light sensor: {e}")
+            logger.error(f"Failed to initialise light sensor: {e}")
 
     def read(self) -> EnviroData:
         """Read all Enviro+ sensors"""
@@ -379,7 +379,7 @@ class SensorManager:
         self.pms5003 = None
         self.enviro = None
 
-        # Initialize sensors based on config
+        # Initialise sensors based on config
         if config.get('scd41', {}).get('enabled', True):
             self.scd41 = SCD41Sensor(config['scd41'])
 
