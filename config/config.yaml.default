@@ -55,6 +55,6 @@ mqtt:
   # Device info (shows in Home Assistant)
   device:
     name: Air Quality Sensor
-    manufacturer: artyzan.net
-    model: Pi Zero 2 W + Enviro+
+    manufacturer: Pimoroni
+    model: Enviro+
     identifier: airsensor_01
