@@ -97,7 +97,7 @@ class MQTTManager:
                 if self.config.get('mqtt', {}).get('discovery', True):
                     self._send_discovery()
             else:
-                logger.warning("MQTT connection timeout - broker may be unreachable")
+                logger.warning("MQTT failed to connect after retries.")
                 logger.warning("MQTT will be disabled. Sensor will continue running without MQTT.")
                 self.client.loop_stop()
                 self.client = None
