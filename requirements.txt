@@ -1,39 +1,13 @@
-# Core Dependencies
 PyYAML==6.0.3
 pillow==12.1.1
 RPi.GPIO==0.7.1
 
-# Sensors
-scd4x==0.0.2
-bme280==0.7
-pms5003==1.0.1
 enviroplus==1.0.2
-ltr559==1.0.0
-smbus2==0.6.0
+scd4x==0.0.2
 
-# Display
-st7735==1.0.0
-
-# MQTT
 paho-mqtt==2.1.0
 
 # Optional - for noise measurement (not yet implemented)
 # sounddevice==0.3.15
 # scipy
 
-## The following requirements were added by pip freeze:
-ads1015==1.0.0
-astral==3.2
-cffi==2.0.0
-font-roboto==0.0.1
-fonts==0.0.3
-gpiod==2.4.0
-gpiodevice==0.0.5
-i2cdevice==1.0.0
-numpy==2.4.2
-pimoroni-bme280==1.0.0
-pycparser==3.0
-pyserial==3.5
-pytz==2025.2
-sounddevice==0.5.5
-spidev==3.8
