@@ -125,177 +125,195 @@ class SCD41Sensor:
                 logger.error(f"Error stopping SCD41: {e}")
 
 class PMS5003Sensor:
-    """PMS5003 Particulate Sensor Interface"""
+    """PMS5003 Particulate Sensor Interface with Sleep/Wake Management"""
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.sensor = None
+        self.pms5003 = None
+        self.gpio_enabled = False
 
-        # PM sensor wake/sleep state
-        self.pm_awake = False
-        self.pm_wake_time = 0
-        self.pm_timestamp = 0
-        self.PM_WARMUP_TIME = config.get('pm_warmup_time', 30)  # seconds
-        self.PM_SLEEP_DURATION = config.get('pm_sleep_duration', 180)  # seconds
-        self.pm_gpio_initialised = False
-        # Caching of last read value for when sensor is sleeping
-        self.last_pm1 = None
-        self.last_pm25 = None
-        self.last_pm10 = None
+        # Sleep/wake configuration
+        self.sleep_enabled = config.get('pm_sleep_enabled', True)
+        self.warmup_seconds = config.get('pm_warmup_time', 30)
+        self.sleep_seconds = config.get('pm_sleep_duration', 180)
+
+        # State tracking
+        self.last_wake_time = 0  # When we last woke the sensor
+        self.last_read_time = 0  # When we last successfully read
+        self.is_awake = False
+
+        # Cached values (returned when sleeping)
+        self.cached_pm1 = None
+        self.cached_pm25 = None
+        self.cached_pm10 = None
 
         self._initialise()
 
     def _initialise(self):
+        """Initialise PMS5003 sensor and GPIO"""
         try:
             from pms5003 import PMS5003
 
-            # Initialise GPIO for PM sensor control
-            if self.config.get('pm_sleep_enabled', True):
+            # Set up GPIO for power control
+            if self.sleep_enabled:
                 try:
-                    # Set up GPIO
                     GPIO.setmode(GPIO.BCM)
                     GPIO.setwarnings(False)
                     GPIO.setup(PM_ENABLE_PIN, GPIO.OUT)
-
-                    # Start with sensor awake (HIGH)
-                    GPIO.output(PM_ENABLE_PIN, GPIO.HIGH)
-                    self.pm_gpio_initialised = True
-                    logger.info(f"GPIO{PM_ENABLE_PIN} configured for PM sensor control")
-
+                    GPIO.output(PM_ENABLE_PIN, GPIO.HIGH)  # Start powered on
+                    self.gpio_enabled = True
+                    self.is_awake = True
+                    self.last_wake_time = time.time()
+                    logger.info(f"GPIO {PM_ENABLE_PIN} configured for PM sensor power control")
                 except Exception as e:
-                    logger.error(f"Failed to initialise GPIO for PM sensor: {e}")
+                    logger.error(f"Failed to configure GPIO: {e}")
+                    self.gpio_enabled = False
 
-            # Initialise PMS5003 sensor (without GPIO parameters)
-            self.pms5003 = PMS5003(device=self.config.get('serialport'))
-
+            # Initialise sensor
+            self.pms5003 = PMS5003(device=self.config.get('serialport', '/dev/ttyS0'))
             logger.info("PMS5003 initialised")
 
         except Exception as e:
             logger.error(f"Failed to initialise PMS5003: {e}")
-            import traceback
-            traceback.print_exc()
+            self.pms5003 = None
 
-    def _should_read_pm_sensor(self) -> bool:
-        """Check if it's time to read PM sensor based on sleep schedule"""
-        if not self.config.get('pm_sleep_enabled', True):
-            return True  # Always read if sleep management disabled
+    def read(self) -> PMS5003Data:
+        """
+        Read PM sensor data.
+        Returns cached values if sensor is sleeping or warming up.
+        """
+        data = PMS5003Data()
+
+        # Always return cached values initially
+        data.pm1 = self.cached_pm1
+        data.pm25 = self.cached_pm25
+        data.pm10 = self.cached_pm10
+        data.pm_timestamp = self.last_read_time if self.last_read_time > 0 else None
+
+        # If sensor not available, return cached values
+        if not self.pms5003:
+            return data
+
+        # If sleep management disabled, always try to read
+        if not self.sleep_enabled:
+            return self._attempt_read(data)
+
+        # Sleep management enabled - check if we should read
+        current_time = time.time()
+
+        # Determine if it's time to wake and read
+        if self.last_read_time == 0:
+            # Never read before - read now
+            should_read = True
+        else:
+            # Check if enough time has passed since last read
+            time_since_read = current_time - self.last_read_time
+            should_read = time_since_read >= self.sleep_seconds
+
+        if not should_read:
+            # Not time yet - keep sleeping, return cached values
+            if self.gpio_enabled and self.last_read_time > 0:
+                time_until_wake = self.sleep_seconds - (current_time - self.last_read_time)
+                logger.debug(f"PM sensor sleeping ({time_until_wake:.0f}s until wake)")
+            return data
+
+        # Time to read - ensure sensor is awake and warmed up
+        if not self._ensure_awake():
+            # Still warming up - return cached values
+            return data
+
+        # Sensor is ready - attempt read
+        result = self._attempt_read(data)
+
+        # Put sensor back to sleep
+        self._sleep()
+        return result
+
+    def _ensure_awake(self) -> bool:
+        """
+        Ensure sensor is awake and warmed up.
+        Returns True if ready to read, False if still warming up.
+        """
+        if not self.gpio_enabled:
+            # No GPIO control - always ready
+            return True
 
         current_time = time.time()
 
-        # If we've never read, read now
-        if self.pm_timestamp == 0:
+        # Check if already awake
+        if self.is_awake:
+            # Check if warmup complete
+            time_awake = current_time - self.last_wake_time
+            if time_awake < self.warmup_seconds:
+                logger.debug(f"PM sensor warming up ({time_awake:.0f}/{self.warmup_seconds}s)")
+                return False
+            # Warmup complete
             return True
 
-        # Check if sleep duration has elapsed
-        time_since_last_read = current_time - self.pm_timestamp
-        return time_since_last_read >= self.PM_SLEEP_DURATION
-
-    def _wake_pm_sensor(self) -> bool:
-        """
-        Wake up PM sensor by setting GPIO22 HIGH.
-        Returns True if ready to read, False if still warming up.
-        """
-        if not self.pms5003 or not self.pm_gpio_initialised:
-            return self.pms5003 is not None  # If no GPIO, sensor is always "awake"
-
-        # If already awake, check if warmup is complete
-        if self.pm_awake:
-            elapsed = time.time() - self.pm_wake_time
-            if elapsed < self.PM_WARMUP_TIME:
-                logger.info(f"PM sensor warming up... {elapsed:.0f}/{self.PM_WARMUP_TIME}s")
-                return False
-            return True  # Awake and ready
-
-        # Wake the sensor by setting enable pin HIGH
+        # Need to wake sensor
         try:
             logger.info("Waking PM sensor...")
             GPIO.output(PM_ENABLE_PIN, GPIO.HIGH)
-
-            self.pm_awake = True
-            self.pm_wake_time = time.time()
-            logger.info(f"PM sensor awake, waiting {self.PM_WARMUP_TIME}s to stabilize...")
+            self.is_awake = True
+            self.last_wake_time = current_time
+            logger.info(f"PM sensor awake, warming up for {self.warmup_seconds}s...")
             return False  # Not ready yet, needs warmup
-
         except Exception as e:
             logger.error(f"Failed to wake PM sensor: {e}")
             return False
 
-    def _sleep_pm_sensor(self):
-        """Put PM sensor to sleep by setting GPIO22 LOW"""
-        if not self.pms5003 or not self.pm_awake or not self.pm_gpio_initialised:
-            return
+    def _attempt_read(self, data: PMS5003Data) -> PMS5003Data:
+        """
+        Attempt to read from the sensor with retries.
+        Updates data object and returns it.
+        """
+        from pms5003 import ReadTimeoutError, SerialTimeoutError
 
-        if not self.config.get('pm_sleep_enabled', True):
-            return  # Don't sleep if management disabled
+        for attempt in range(3):
+            try:
+                pm_data = self.pms5003.read()
+
+                # Successful read - update cache and data
+                self.cached_pm1 = data.pm1 = pm_data.pm_ug_per_m3(1.0)
+                self.cached_pm25 = data.pm25 = pm_data.pm_ug_per_m3(2.5)
+                self.cached_pm10 = data.pm10 = pm_data.pm_ug_per_m3(10)
+                self.last_read_time = data.pm_timestamp = time.time()
+
+                logger.info(f"PM: {data.pm25:.1f} μg/m³")
+                return data
+
+            except (ReadTimeoutError, SerialTimeoutError) as e:
+                if attempt < 2:
+                    logger.debug(f"PM read timeout, retrying ({attempt + 1}/3)...")
+                    time.sleep(1)
+                else:
+                    logger.warning(f"PM read failed after 3 attempts")
+
+            except Exception as e:
+                logger.error(f"PM read error: {e}")
+                break
+
+        # All attempts failed - return data with cached values
+        return data
+
+    def _sleep(self):
+        """Put sensor to sleep to save power"""
+        if not self.gpio_enabled or not self.is_awake:
+            return
 
         try:
             logger.info("Putting PM sensor to sleep...")
             GPIO.output(PM_ENABLE_PIN, GPIO.LOW)
-            self.pm_awake = False
-            logger.debug(f"PM sensor sleeping (will wake in ~{self.PM_SLEEP_DURATION}s)")
-
+            self.is_awake = False
+            logger.debug(f"PM sensor asleep (will wake in ~{self.sleep_seconds}s)")
         except Exception as e:
             logger.error(f"Failed to sleep PM sensor: {e}")
 
-    def read(self) -> PMS5003Data:
-
-        data = PMS5003Data()
-
-        try:
-            from pms5003 import ReadTimeoutError, SerialTimeoutError
-
-            # Return last known values for when sensor is sleeping
-            data.pm1 = self.last_pm1
-            data.pm25 = self.last_pm25
-            data.pm10 = self.last_pm10
-            data.pm_timestamp = self.pm_timestamp if self.pm_timestamp > 0 else None
-
-            # Check if it's time to read the PM sensor
-            should_read = self._should_read_pm_sensor()
-
-            if should_read:
-                # Wake sensor if needed
-                if not self._wake_pm_sensor():
-                    logger.debug("PM sensor not ready yet (warming up)")
-                else:
-                    # Sensor is awake and ready - try to read with retries
-                    for attempt in range(3):
-                        try:
-                            pm_data = self.pms5003.read()
-                            self.last_pm1 = data.pm1 = pm_data.pm_ug_per_m3(1.0)
-                            self.last_pm25 = data.pm25 = pm_data.pm_ug_per_m3(2.5)
-                            self.last_pm10 = data.pm10 = pm_data.pm_ug_per_m3(10)
-                            data.pm_timestamp = self.pm_timestamp = time.time()
-                            logger.info(f"PM: {data.pm25:.1f} μg/m³ (attempt {attempt + 1})")
-                            break
-                        except (ReadTimeoutError, SerialTimeoutError):
-                            if attempt < 2:
-                                logger.debug(f"PM read timeout, retrying... ({attempt + 1}/3)")
-                                time.sleep(1)
-                            else:
-                                logger.warning("PM read timeout after 3 attempts")
-                        except Exception as e:
-                            logger.error(f"PM read error: {e}")
-                            break
-
-                    # Put sensor back to sleep
-                    self._sleep_pm_sensor()
-            else:
-                if self.pm_gpio_initialised and self.pm_timestamp > 0:
-                    time_until_wake = self.PM_SLEEP_DURATION - (time.time() - self.pm_timestamp)
-                    logger.debug(f"PM sensor sleeping (wake in {time_until_wake:.0f}s)")
-
-        except Exception as e:
-            logger.error(f"Error reading PMS5003: {e}")
-
-        return data
-
     def close(self):
         """Clean shutdown"""
-        # Sleep PM sensor before closing (recommended)
-        logger.debug(f"Closing PM sensor {self.pms5003 is not None}, {self.pm_gpio_initialised}")
-        if self.pms5003 is not None and self.pm_gpio_initialised:
-            self._sleep_pm_sensor()
+        if self.pms5003 and self.gpio_enabled:
+            self._sleep()
+            logger.info("PM sensor closed")
 
 class EnviroSensor:
     """Enviro+ Onboard Sensors - BME280, LTR559, MICS6814"""
