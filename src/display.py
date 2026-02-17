@@ -6,7 +6,7 @@ Clean, modular screen management
 
 import time
 import logging
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from PIL import Image, ImageDraw, ImageFont
 from ST7735 import ST7735
 
@@ -78,7 +78,7 @@ class DisplayManager:
                 'large': ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24),
                 'huge': ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
             }
-        except Exception:
+        except FileNotFoundError:
             # Fallback to default font
             logger.warning("Could not load TrueType fonts, using default")
             self.fonts = {
@@ -151,23 +151,23 @@ class DisplayManager:
         """Get color based on CO2 level"""
         if co2 < 800:
             return (0, 255, 0)  # Green - Good
-        elif co2 < 1000:
+        if co2 < 1000:
             return (255, 255, 0)  # Yellow - Moderate
-        elif co2 < 1500:
+        if co2 < 1500:
             return (255, 165, 0)  # Orange - Poor
-        else:
-            return (255, 0, 0)  # Red - Unhealthy
+
+        return (255, 0, 0)  # Red - Unhealthy
 
     def _get_co2_label(self, co2: int) -> str:
         """Get label based on CO2 level"""
         if co2 < 800:
             return "GOOD"
-        elif co2 < 1000:
+        if co2 < 1000:
             return "MODERATE"
-        elif co2 < 1500:
+        if co2 < 1500:
             return "POOR"
-        else:
-            return "UNHEALTHY"
+
+        return "UNHEALTHY"
 
     def _render_co2(self, data: Dict[str, Any]):
         """Render main CO2 screen (large CO2 value)"""
