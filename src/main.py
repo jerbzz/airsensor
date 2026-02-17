@@ -103,7 +103,6 @@ class Airsensor:
                 self.mqtt = MQTTManager(self.config)
 
             logger.info("Initialisation complete!")
-            logger.info("=" * 60)
 
         except Exception as e:
             logger.error(f"Initialisation failed: {e}")
@@ -116,7 +115,6 @@ class Airsensor:
         logger.info("Starting main loop...")
         logger.info(f"Update interval: {self.update_interval}s")
         logger.info(f"Display cycle time: {self.display_cycle_time}s")
-        logger.info("Waiting 10 seconds for sensors to stabilise...")
 
         try:
             while self.running:
