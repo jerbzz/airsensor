@@ -5,11 +5,17 @@ A system to collect data from the Pimoroni Enviro+ and deliver it to HomeAssista
 ## Features
 
 ✅ **Home Assistant integration** - MQTT with auto-discovery, zero HA configuration required
+
 ✅ **LCD display** - Cycling screens showing all sensor data
+
 ✅ **Easy installation** - Installs with one command, including to run automatically at startup
+
 ✅ **Easy configuration** - Single YAML config file, human-readable with sane defaults
+
 ✅ **Supports Enviro+ sensor suite** - Temperature, humidity, pressure, light level, pollutant gases
+
 ✅ **Particulate matter monitoring (optional)** - Support for PMS5003
+
 ✅ **True CO2 monitoring (optional)** - Support for SCD41 photoacoustic sensor (400-5000 ppm)
 
 ## Hardware Requirements
