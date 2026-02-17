@@ -2,7 +2,7 @@
 
 general:
   log_level: WARNING  # DEBUG, INFO, WARNING, ERROR
-  update_interval: 5  # seconds between sensor readings
+  update_interval: 20  # seconds between sensor readings
 
 # SCD41 CO2 Sensor Settings (Optional Add-on - connect to GPIO breakouts on Enviro+)
 scd41:
