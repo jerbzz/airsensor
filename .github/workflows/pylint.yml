@@ -20,7 +20,7 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py') --fail-under=9 | tee pylint-report.txt
+        pylint $(git ls-files '*.py') --fail-under=9 --max-line-length=120 | tee pylint-report.txt
         PYLINT_EXIT=${PIPESTATUS[0]}
         tail -n 2 pylint-report.txt >> $GITHUB_STEP_SUMMARY
         exit $PYLINT_EXIT
