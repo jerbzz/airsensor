@@ -20,4 +20,5 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py') --fail-under=9
+        pylint $(git ls-files '*.py') --fail-under=9 | tee pylint-report.txt
+        tail -n 2 pylint-report.txt >> $GITHUB_STEP_SUMMARY
