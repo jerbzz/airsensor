@@ -8,6 +8,8 @@ import time
 import logging
 from typing import Optional, Dict, Any
 from PIL import Image, ImageDraw, ImageFont
+from ST7735 import ST7735
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,6 @@ class DisplayManager:
     def _initialise(self):
         """Initialise the display"""
         try:
-            from ST7735 import ST7735
 
             logger.info("Initialising ST7735 display...")
 
@@ -63,7 +64,7 @@ class DisplayManager:
             logger.info("Display initialised")
 
         except Exception as e:
-            logger.error(f"Failed to initialise display: {e}")
+            logger.error("Failed to initialise display: %s", e)
             raise
 
     def _load_fonts(self):
@@ -77,7 +78,7 @@ class DisplayManager:
                 'large': ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24),
                 'huge': ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
             }
-        except:
+        except Exception:
             # Fallback to default font
             logger.warning("Could not load TrueType fonts, using default")
             self.fonts = {
@@ -137,18 +138,10 @@ class DisplayManager:
 
         if screen_name == 'co2':
             return scd41 is not None
-        elif screen_name == 'temp':
-            return True
-        elif screen_name == 'pm':
+        if screen_name == 'pm':
             return pms5003 is not None
-        elif screen_name == 'gas':
-            return True
-        elif screen_name == 'baro':
-            return True
-        elif screen_name == 'summary':
-            return True  # Summary always available, shows what's available
 
-        return True
+        return True # it's only CO2 and PM we would want to disable
 
     def next_screen(self):
         """Switch to next screen"""
@@ -318,7 +311,7 @@ class DisplayManager:
         self.clear()
 
         scd41 = data.get('scd41')
-        enviro = data.get('enviro')
+        # enviro = data.get('enviro')
         pms = data.get('pms5003')
 
         # Title
