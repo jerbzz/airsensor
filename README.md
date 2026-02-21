@@ -9,20 +9,20 @@ A system to collect data from the Pimoroni Enviro+ and deliver it to HomeAssista
 ✅ **Easy installation** - Installs with one command, including to run automatically at startup  
 ✅ **Easy configuration** - Single YAML config file, human-readable with sane defaults  
 ✅ **Supports Enviro+ sensor suite** - Temperature, humidity, pressure, light level, pollutant gases  
-✅ **Particulate matter monitoring (optional)** - Support for PMS5003 particulate sensor (PM1, PM2.5, PM10)  
+✅ **Particulate matter monitoring (optional)** - Support for PMS5003  
 ✅ **True CO2 monitoring (optional)** - Support for SCD41 photoacoustic sensor (400-5000 ppm)  
 
 ## Hardware Requirements
 
 **Minimum (Basic Setup):**
 - Raspberry Pi Zero 2 W (or any Raspberry Pi)
-- Pimoroni Enviro+ HAT
+- [Pimoroni Enviro+ HAT](https://shop.pimoroni.com/products/enviro?variant=31155658457171)
 - microSD card (8GB+)
 - Power supply
 
 **Optional Add-ons:**
-- PMS5003 Particulate Matter sensor (dedicated connector available on Enviro+)
-- Pimoroni SCD41 CO2 Sensor Breakout (requires soldering or another method of connection to Enviro+ GPIO headers)
+- [PMS5003 Particulate Matter sensor](https://shop.pimoroni.com/products/pms5003-particulate-matter-sensor-with-cable?variant=29075640352851) dedicated connector available on Enviro+)
+- [Pimoroni SCD41 CO2 Sensor Breakout](https://shop.pimoroni.com/products/scd41-co2-sensor-breakout?variant=39652270833747) requires soldering or another method of connection to Enviro+ GPIO headers)
 
 ## Quick Start
 
@@ -50,7 +50,7 @@ Edit `config/config.yaml` with your settings:
 ```yaml
 mqtt:
   enabled: true
-  broker: 192.168.1.100  # Your Home Assistant IP or domain name
+  broker: 192.168.1.100  # Your Home Assistant IP
   username: mqtt_user     # If using authentication
   password: mqtt_pass
 ```
@@ -59,11 +59,10 @@ mqtt:
 
 ```bash
 # Test run
-cd /opt/airsensor
-source bin/.venv/activate
 python3 src/main.py
 
 # Or run as a service (auto-start on boot)
+sudo cp co2-monitor.service /etc/systemd/system/
 sudo systemctl enable co2-monitor
 sudo systemctl start co2-monitor
 ```
