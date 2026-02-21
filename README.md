@@ -9,7 +9,7 @@ A system to collect data from the Pimoroni Enviro+ and deliver it to HomeAssista
 ✅ **Easy installation** - Installs with one command, including to run automatically at startup  
 ✅ **Easy configuration** - Single YAML config file, human-readable with sane defaults  
 ✅ **Supports Enviro+ sensor suite** - Temperature, humidity, pressure, light level, pollutant gases  
-✅ **Particulate matter monitoring (optional)** - Support for PMS5003  
+✅ **Particulate matter monitoring (optional)** - Support for PMS5003 particulate sensor (PM1, PM2.5, PM10)
 ✅ **True CO2 monitoring (optional)** - Support for SCD41 photoacoustic sensor (400-5000 ppm)  
 
 ## Hardware Requirements
@@ -50,7 +50,7 @@ Edit `config/config.yaml` with your settings:
 ```yaml
 mqtt:
   enabled: true
-  broker: 192.168.1.100  # Your Home Assistant IP
+  broker: 192.168.1.100  # Your Home Assistant IP or domain name
   username: mqtt_user     # If using authentication
   password: mqtt_pass
 ```
@@ -59,10 +59,11 @@ mqtt:
 
 ```bash
 # Test run
+cd /opt/airsensor
+source bin/.venv/activate
 python3 src/main.py
 
 # Or run as a service (auto-start on boot)
-sudo cp co2-monitor.service /etc/systemd/system/
 sudo systemctl enable co2-monitor
 sudo systemctl start co2-monitor
 ```
