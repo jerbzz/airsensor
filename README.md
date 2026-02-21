@@ -30,7 +30,7 @@ A system to collect data from the Pimoroni Enviro+ and deliver it to HomeAssista
 
 1. Attach Enviro+ HAT to Raspberry Pi GPIO header
 2. Connect SCD41 sensor via I2C (Qwiic/STEMMA QT or GPIO pins 1,3,5,7,9)
-3. Use Raspberry Pi Imager (https://www.raspberrypi.com/software/) to download and install Raspberry Pi OS Lite 64-bit on the micro-SD card.
+3. Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/) to download and install Raspberry Pi OS Lite 64-bit on the micro-SD card.
 4. Power on the Pi
 5. Connect to the Pi over SSH, or using Raspberry Pi Connect
 
