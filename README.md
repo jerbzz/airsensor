@@ -39,7 +39,7 @@ A system to collect data from the Pimoroni Enviro+ and deliver it to HomeAssista
 You can directly download and install the software and its prerequisites in one step. 
 You should examine the contents of any script before using it in this way!
 
-`curl https://raw.githubusercontent.com/jerbzz/airsensor/refs/heads/main/install.sh | bash`
+```curl https://raw.githubusercontent.com/jerbzz/airsensor/refs/heads/main/install.sh | bash```
 
 ### 3. Configuration
 
