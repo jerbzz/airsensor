@@ -30,20 +30,16 @@ A system to collect data from the Pimoroni Enviro+ and deliver it to HomeAssista
 
 1. Attach Enviro+ HAT to Raspberry Pi GPIO header
 2. Connect SCD41 sensor via I2C (Qwiic/STEMMA QT or GPIO pins 1,3,5,7,9)
-3. Power on the Pi
+3. Use Raspberry Pi Imager (https://www.raspberrypi.com/software/) to download and install Raspberry Pi OS Lite 64-bit on the micro-SD card.
+4. Power on the Pi
+5. Connect to the Pi over SSH, or using Raspberry Pi Connect
 
 ### 2. Software Installation
 
-```bash
-# Clone or download this repository
-cd ~
-# (Copy the co2-monitor folder to your Pi)
+You can directly download and install the software and its prerequisites in one step. 
+You should examine the contents of any script before using it in this way!
 
-# Run installation
-cd co2-monitor
-chmod +x install.sh
-bash install.sh
-```
+`curl https://raw.githubusercontent.com/jerbzz/airsensor/refs/heads/main/install.sh | bash`
 
 ### 3. Configuration
 
