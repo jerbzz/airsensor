@@ -101,12 +101,11 @@ fi
 
 # Install systemd service
 sudo cp /opt/airsensor/airsensor.service /etc/systemd/system/
-sudo systemctl enable airsensor
 
 echo "Installation Complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Edit /opt/airsensor/config/config.yaml with your settings incuding updating MQTT broker address for Home Assistant"
-echo "  2. Start the service: 'sudo systemctl start airsensor'."
+echo "  2. Start the service: 'sudo systemctl enable airsensor && sudo systemctl start airsensor'."
 echo "  3. Check it's running properly by observing the Enviro+ screen."
 echo "  4. 'sudo systemctl status airsensor' will tell you more."
